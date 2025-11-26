@@ -23,10 +23,6 @@ EXPOSE 8000
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
 CMD [ \
   "python", "-m", "gunicorn", \
   "--bind", "0.0.0.0:8000", \
