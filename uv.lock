@@ -413,7 +413,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.122.0" },
-    { name = "memu-py", specifier = ">=0.2.2" },
+    { name = "memu-py", specifier = "==0.6.0" },
 ]
 
 [package.metadata.requires-dev]
