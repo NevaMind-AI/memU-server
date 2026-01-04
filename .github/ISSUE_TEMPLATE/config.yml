@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/memU-server/docs
+    about: Check out the documentation for memU-server
+  - name: Discussions
+    url: https://github.com/memU-server/discussions
+    about: Ask questions and discuss ideas with the community
