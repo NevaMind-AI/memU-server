@@ -1,8 +1,9 @@
 blank_issues_enabled: false
 contact_links:
-  - name: wiki
+  - name: Wiki
     url: https://github.com/NevaMind-AI/memU-server/wiki
     about: Check out the documentation for memU-server
   - name: Discussions
     url: https://github.com/NevaMind-AI/memU-server/discussions
     about: Ask questions and discuss ideas with the community
+
