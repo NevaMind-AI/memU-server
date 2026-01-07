@@ -1,0 +1,49 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches: [ main, feat/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        run: |
+          docker build --platform linux/amd64 \
+            -f dockerfiles/Dockerfile \
+            -t memu-server .
+      
+      - name: Test image
+        if: github.event_name == 'push'
+        run: |
+          docker run -d -p 8005:8000 \
+            -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            --name test memu-server
+          sleep 5
+          curl -f http://localhost:8005 || exit 1
+          docker logs test
+          docker stop test
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker (Colima)
+        run: |
+          brew install docker docker-buildx colima
+          colima start --cpu 2 --memory 4
+          
+      - name: Build Docker image for Mac
+        run: |
+          docker build --platform linux/amd64 \
+            -f dockerfiles/Dockerfile \
+            -t memu-server .
