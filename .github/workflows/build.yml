@@ -32,23 +32,21 @@ jobs:
           docker logs test
           docker stop test
 
-  build-mac:
-    runs-on: macos-latest
+  build-linux-arm:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Validate Dockerfile syntax
+      - name: Set up QEMU for multi-architecture
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image for ARM64
         run: |
-          # Install hadolint for Dockerfile linting
-          brew install hadolint
-          hadolint dockerfiles/Dockerfile || true
-          
-      - name: Check Dockerfile exists and is valid
-        run: |
-          if [ -f dockerfiles/Dockerfile ]; then
-            echo "✅ Dockerfile found"
-            cat dockerfiles/Dockerfile
-          else
-            echo "❌ Dockerfile not found"
-            exit 1
-          fi
+          docker buildx build --platform linux/arm64 \
+            -f dockerfiles/Dockerfile \
+            -t memu-server:arm64 \
+            --load \
+            .
