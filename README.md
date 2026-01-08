@@ -3,8 +3,9 @@
 memU-server is the backend management service for MemU, responsible for providing API endpoints, data storage, and management capabilities, as well as deep integration with the core memU framework. It powers the frontend memU-ui with reliable data support, ensuring efficient reading, writing, and maintenance of Agent memories. memU-server can be deployed locally or in private environments and supports quick startup and configuration via Docker, enabling developers to manage the AI memory system in a secure environment.
 
 - Core Algorithm 👉 memU: https://github.com/NevaMind-AI/memU
+- Local visual interface 👉 memU-ui: https://github.com/NevaMind-AI/memU-ui
 - One call = response + memory 👉 memU Response API: https://memu.pro/docs#responseapi
-- Try it instantly 👉 https://app.memu.so/quick-start
+- Try MemU cloud version instantly 👉 https://app.memu.so/quick-start
 
 ---
 
@@ -130,3 +131,4 @@ For more information please contact info@nevamind.ai
 - GitHub Issues: Report bugs, request features, and track development. [Submit an issue](https://github.com/NevaMind-AI/memU-server/issues)
 - Discord: Get real-time support, chat with the community, and stay updated. [Join us](https://discord.com/invite/hQZntfGsbJ)
 - X (Twitter): Follow for updates, AI insights, and key announcements. [Follow us](https://x.com/memU_ai)
+
