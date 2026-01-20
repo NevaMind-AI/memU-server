@@ -47,10 +47,13 @@ ENV/
 # Logs
 *.log
 logs/
+server.log
+nohup.out
 
 # Storage
 storage/*
 !storage/.gitkeep
+data/
 
 # Alembic
 alembic/versions/__pycache__/
