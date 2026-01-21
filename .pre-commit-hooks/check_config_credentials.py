@@ -11,10 +11,16 @@ CREDENTIAL_PATTERNS = [
     (r"postgresql://[^$@{}][^@]*:[^$@{}][^@]*@", "PostgreSQL URL with hardcoded credentials"),
     (r"mysql://[^$@{}][^@]*:[^$@{}][^@]*@", "MySQL URL with hardcoded credentials"),
     (r"mongodb://[^$@{}][^@]*:[^$@{}][^@]*@", "MongoDB URL with hardcoded credentials"),
-    # Common password/key patterns (not in comments)
+    # Common password/key patterns with quotes (INI, TOML)
     (r'^[^#]*password\s*=\s*["\'](?!\$\{)[^"\'].*["\']', "Hardcoded password"),
     (r'^[^#]*api[_-]?key\s*=\s*["\'](?!\$\{)[^"\'].*["\']', "Hardcoded API key"),
     (r'^[^#]*secret\s*=\s*["\'](?!\$\{)[^"\'].*["\']', "Hardcoded secret"),
+    # YAML-style patterns without quotes (docker-compose.yml, k8s configs)
+    (r"^\s*POSTGRES_PASSWORD\s*:\s*(?!\$\{)[a-zA-Z0-9_]+\s*$", "Hardcoded PostgreSQL password in YAML"),
+    (r"^\s*POSTGRES_USER\s*:\s*(?!\$\{)[a-zA-Z0-9_]+\s*$", "Hardcoded PostgreSQL user in YAML"),
+    (r"^\s*MYSQL_PASSWORD\s*:\s*(?!\$\{)[a-zA-Z0-9_]+\s*$", "Hardcoded MySQL password in YAML"),
+    (r"^\s*MYSQL_USER\s*:\s*(?!\$\{)[a-zA-Z0-9_]+\s*$", "Hardcoded MySQL user in YAML"),
+    (r"^\s*password\s*:\s*(?!\$\{)[\w@#$%^&*()_+\-=]+\s*$", "Hardcoded password in YAML"),
 ]
 
 # File patterns to check
