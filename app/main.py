@@ -8,11 +8,37 @@ from fastapi.responses import JSONResponse
 from fastapi import FastAPI, HTTPException
 from memu.app import MemoryService
 
-app = FastAPI()
-service = MemoryService(llm_config={"api_key": os.getenv("OPENAI_API_KEY")})
+app = FastAPI(title="memU Server", version="0.1.0")
 
-storage_dir = Path(os.getenv("MEMU_STORAGE_DIR", "./data"))
+# Ensure required environment variables are set
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
+    raise RuntimeError(
+        "OPENAI_API_KEY environment variable is not set or is empty. "
+        "Set OPENAI_API_KEY to a valid OpenAI API key before starting the server."
+    )
+
+# Initialize MemoryService with proper configuration
+service = MemoryService(
+    llm_profiles={
+        "default": {
+            "provider": "openai",
+            "api_key": openai_api_key,
+            "base_url": os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            "model": os.getenv("DEFAULT_LLM_MODEL", "gpt-4o-mini"),
+        }
+    },
+    database_config={
+        "url": os.getenv(
+            "DATABASE_URL",
+            "postgresql+psycopg://memu_user:memu_pass@localhost:54320/memu_db",
+        )
+    },
+)
+
+storage_dir = Path(os.getenv("STORAGE_PATH", "./data"))
 storage_dir.mkdir(parents=True, exist_ok=True)
+
 
 @app.post("/memorize")
 async def memorize(payload: Dict[str, Any]):
@@ -26,6 +52,7 @@ async def memorize(payload: Dict[str, Any]):
     except Exception as exc:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(exc))
+
 
 @app.post("/retrieve")
 async def retrieve(payload: Dict[str, Any]):

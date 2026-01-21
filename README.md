@@ -7,126 +7,378 @@ memU-server is the backend management service for MemU, responsible for providin
 - Try it instantly 👉 https://app.memu.so/quick-start
 
 ---
+## ✨ Features
 
-## ⭐ Star Us on GitHub
+- 🧠 **Memorize**: Store and process conversational memories asynchronously
+- 🔍 **Retrieve**: Query and retrieve relevant memories with semantic search
+- 🚀 **Async First**: Built with FastAPI and async/await for high performance
+- 🗄️ **PostgreSQL + pgvector**: Vector similarity search with efficient indexing
+- ⚡ **Temporal Workflows**: Reliable async task orchestration
+- 🔧 **Type Safe**: Full type hints with Pydantic and SQLModel
+- 🧪 **Well Tested**: Comprehensive test coverage with pytest
 
-Star memU-server to get notified about new releases and join our growing community of AI developers building intelligent agents with persistent memory capabilities.
-💬 Join our Discord community: https://discord.gg/memu
+## 🏗️ Architecture
 
----
+- **Web Framework**: FastAPI with async/await
+- **Database**: PostgreSQL 16 with pgvector extension
+- **ORM**: SQLModel (SQLAlchemy + Pydantic)
+- **Workflow Engine**: Temporal for async task processing
+- **Memory Engine**: memu-py for intelligent memory management
+- **Migrations**: Alembic for database schema management
 
-## 🚀 Get Started
+## 🚀 Quick Start
 
-### Run from source
-1. Ensure you have Python 3.14+ and [uv](https://docs.astral.sh/uv/) installed.
-2. Clone the repository and enter it:
-   ```bash
-   git clone https://github.com/NevaMind-AI/memU-server.git
-   cd memU-server
-   ```
-3. Set your OpenAI API key in the environment:
-   ```bash
-   export OPENAI_API_KEY=your_api_key_here
-   ```
-4. Install dependencies and start the FastAPI dev server:
-   ```bash
-   uv sync
-   uv run fastapi dev
-   ```
-   The server runs on `http://127.0.0.1:8000`.
+### Prerequisites
 
-### Run with Docker
-1. Export your OpenAI API key so Docker can read it:
-   ```bash
-   export OPENAI_API_KEY=your_api_key_here
-   ```
-2. Pull the latest image:
-   ```bash
-   docker pull nevamindai/memu-server:latest
-   ```
-3. Start the container (optionally mount a host directory to persist `./data`):
-   ```bash
-   docker run --rm -p 8000:8000 \
-     -e OPENAI_API_KEY=$OPENAI_API_KEY \
-     nevamindai/memu-server:latest
-   ```
-   Access the API at `http://127.0.0.1:8000`.
+- Python 3.13+
+- Docker & Docker Compose
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
 
-### API Endpoints
-- `POST /memorize`: persist a conversation-style payload for later retrieval. Example body shape:
-  ```json
-  {
-    "content": [
-      {"role": "user", "content": {"text": "..."}, "created_at": "YYYY-MM-DD HH:MM:SS"},
-      {"role": "assistant", "content": {"text": "..."}, "created_at": "YYYY-MM-DD HH:MM:SS"}
-    ]
-  }
-  ```
-- `POST /retrieve`: query stored memories with a text prompt:
-  ```json
-  {"query": "your question about the conversation"}
-  ```
-- To smoke-test locally, set `MEMU_API_URL` (defaults to `http://127.0.0.1:12345`), POST a conversation to `/memorize`, then call `/retrieve` with a text query.
+### Installation
 
----
+1. **Clone the repository**
+```bash
+git clone https://github.com/NevaMind-AI/memU-server.git
+cd memU-server
+\`\`\`
 
-## 🔑 Key Features
+2. **Set up Python environment**
+\`\`\`bash
+# Create virtual environment with uv (recommended)
+uv venv
+source .venv/bin/activate
 
-### Quick Deployment
-- Docker image provided
-- Launch backend service and database with a single command
-- Provides API endpoints compatible with memU-ui, ensuring stable and reliable data services
+# Or with standard venv
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+\`\`\`
 
-### Comprehensive Memory Management
-(Some features planned for future releases)
-- Memory Data Management
-  - Support creating, reading, and deleting Memory Submissions
-  - Memorize results support create, read, update, and delete (CRUD) operations
-  - Retrieve records support querying and tracking
-  - Tracks LLM token usage for transparent and controllable costs
-- User and Permission Management
-  - User login and registration system
-  - Role-based access control: Developer / Admin / Regular User
-  - Backend manages access scope and permissions for secure operations
+3. **Install dependencies**
+\`\`\`bash
+# With uv (fast)
+uv pip install -e .
 
----
+# Or with pip
+pip install -e .
+\`\`\`
 
-## 🧩 Why MemU?
+4. **Configure environment**
+\`\`\`bash
+cp .env.example .env
+# Edit .env with your configuration
+\`\`\`
 
-Most memory systems in current LLM pipelines rely heavily on explicit modeling, requiring manual definition and annotation of memory categories. This limits AI’s ability to truly understand memory and makes it difficult to support diverse usage scenarios.
+5. **Start infrastructure services**
+\`\`\`bash
+docker compose up -d
+\`\`\`
 
-MemU offers a flexible and robust alternative, inspired by hierarchical storage architecture in computer systems. It progressively transforms heterogeneous input data into queryable and interpretable textual memory.
+This will start:
+- PostgreSQL with pgvector on port 54320
+- Temporal server on ports 17233 (gRPC) and 18233 (Web UI)
 
-Its core architecture consists of three layers: **Resource Layer → Memory Item Layer → MemoryCategory Layer**.
+6. **Run database migrations**
+\`\`\`bash
+alembic upgrade head
+\`\`\`
 
-<img width="1363" height="563" alt="Three-Layer Architecture Diagram" src="https://github.com/user-attachments/assets/2803b54a-7595-42f7-85ad-1ea505a6d57c" />
+7. **Start the server**
+\`\`\`bash
+# Development mode with auto-reload
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-- Resource Layer: Multimodal raw data warehouse
-- Memory Item Layer: Discrete extracted memory units
-- MemoryCategory Layer: Aggregated textual memory units
+# Or in background
+nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
+\`\`\`
 
-### Key Features:
-- Full Traceability: Track from raw data → items → documents and back
-- Memory Lifecycle: Memorization → Retrieval → Self-evolution
-- Two Retrieval Methods:
-  - RAG-based: Fast embedding vector search
-  - LLM-based: Direct file reading with deep semantic understanding
-- Self-Evolving: Adapts memory structure based on usage patterns
+The API will be available at:
+- API: http://localhost:8000
+- API Docs (Swagger): http://localhost:8000/docs
+- Alternative Docs (ReDoc): http://localhost:8000/redoc
 
-<img width="1365" height="308" alt="process" src="https://github.com/user-attachments/assets/3c5ce3ff-14c0-4d2d-aec7-c93f04a1f3e4" />
+## 📝 Configuration
 
----
+Key environment variables in \`.env\`:
+
+\`\`\`bash
+# Database
+DATABASE_HOST=localhost
+DATABASE_PORT=54320
+DATABASE_USER=memu_user
+DATABASE_PASSWORD=memu_pass
+DATABASE_NAME=memu_db
+
+# Temporal
+TEMPORAL_HOST=localhost
+TEMPORAL_PORT=17233
+TEMPORAL_NAMESPACE=default
+
+# LLM
+OPENAI_API_KEY=your_api_key_here
+OPENAI_BASE_URL=https://api.openai.com/v1
+DEFAULT_LLM_MODEL=gpt-4o-mini
+
+# Embedding
+EMBEDDING_API_KEY=your_embedding_key_here
+EMBEDDING_BASE_URL=https://api.voyageai.com/v1
+EMBEDDING_MODEL=voyage-3.5-lite
+
+# Storage
+STORAGE_PATH=/var/data/memu-server
+\`\`\`
+
+## 🧪 Testing
+
+Run tests with pytest or make:
+
+\`\`\`bash
+# Run all tests
+pytest
+
+# Or use make command
+make test
+
+# Run with coverage
+pytest --cov=app --cov-report=html
+
+# Run specific test file
+pytest tests/test_health.py -v
+\`\`\`
+
+## 🔧 Code Quality
+
+### Automated Quality Checks
+
+This project uses multiple layers of quality assurance:
+
+**1. Pre-commit Hooks** (Recommended)
+
+Install pre-commit hooks to automatically check code before every commit:
+
+```bash
+# Install pre-commit hooks
+make pre-commit-install
+
+# Now hooks will run automatically on git commit
+# To manually run on all files:
+make pre-commit-run
+```
+
+**2. Manual Quality Checks**
+
+```bash
+# Show all available commands
+make help
+
+# Run all quality checks (format, lint, test)
+make check
+
+# Format code with ruff
+make format
+
+# Check formatting without changes
+make format-check
+
+# Lint code
+make lint
+
+# Run tests
+make test
+
+# Clean cache files
+make clean
+```
+
+**3. CI/CD Pipeline**
+
+GitHub Actions automatically runs quality checks on:
+- Every push to `main`, `develop`, or `feature/**` branches
+- Every pull request
+
+### Best Practices
+
+**Before committing code:**
+```bash
+# Option 1: Let pre-commit hooks handle it (recommended)
+git add .
+git commit -m "your message"  # Hooks run automatically
+
+# Option 2: Run checks manually first
+make check
+git add .
+git commit -m "your message"
+```
+
+**Pre-commit hooks will:**
+- ✅ Format code with ruff
+- ✅ Fix common issues automatically
+- ✅ Check YAML, JSON, TOML syntax
+- ✅ Detect private keys and large files
+- ✅ Trim whitespace and fix line endings
+- ❌ Block commit if critical issues found
+
+**What gets checked:**
+- Code formatting (ruff format)
+- Linting rules (ruff check)
+- File syntax (YAML, JSON, TOML)
+- Security issues (private keys)
+- File size limits
+- Merge conflicts
+
+\`\`\`bash
+# Show all available commands
+make help
+
+# Run all quality checks (format, lint, test)
+make check
+
+# Format code with ruff
+make format
+
+# Check formatting without changes
+make format-check
+
+# Lint code
+make lint
+
+# Run tests
+make test
+
+# Install dependencies
+make install
+
+# Install dev dependencies
+make dev
+
+# Clean cache files
+make clean
+\`\`\`
+
+**Before committing code, always run:**
+\`\`\`bash
+make check
+\`\`\`
+
+This will ensure your code is properly formatted, linted, and all tests pass.
+
+## 🗃️ Database Models
+
+### Memory
+Stores individual memory entries with vector embeddings for semantic search.
+
+### MemoryCategory
+Organizes memories into categories with metadata.
+
+### MemorizeTask
+Tracks async memory processing tasks with status and results.
+
+## 🔄 API Endpoints
+
+### Memorize
+\`\`\`bash
+POST /memorize
+\`\`\`
+Store new memory asynchronously.
+
+### Retrieve
+\`\`\`bash
+POST /retrieve
+\`\`\`
+Query and retrieve relevant memories.
+
+### Health Check
+\`\`\`bash
+GET /
+\`\`\`
+Returns service status.
+
+## 🛠️ Development
+
+### Project Structure
+\`\`\`
+memU-server/
+├── app/
+│   ├── api/          # API routes
+│   ├── models/       # Database models
+│   ├── services/     # Business logic
+│   ├── workers/      # Temporal workers
+│   ├── utils/        # Utilities
+│   ├── database.py   # Database configuration
+│   └── main.py       # FastAPI application
+├── config/
+│   └── settings.py   # Configuration management
+├── tests/            # Test suite
+├── alembic/          # Database migrations
+├── docker-compose.yml
+├── pyproject.toml
+└── README.md
+\`\`\`
+
+### Code Quality
+
+\`\`\`bash
+# Format code with ruff
+ruff format .
+
+# Lint code
+ruff check .
+
+# Type checking (if mypy is installed)
+mypy app/
+\`\`\`
+
+### Database Migrations
+
+\`\`\`bash
+# Create a new migration
+alembic revision --autogenerate -m "description"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+
+# View migration history
+alembic history
+\`\`\`
+
+## 🐳 Docker
+
+Build and run with Docker:
+
+\`\`\`bash
+# Build image
+docker build -f dockerfiles/Dockerfile -t memu-server .
+
+# Run container
+docker run -d \
+  --name memu-server \
+  -p 8000:8000 \
+  --env-file .env \
+  memu-server
+\`\`\`
+
+## 📊 Monitoring
+
+- **Temporal Web UI**: http://localhost:18233
+- **Database**: Connect to PostgreSQL on port 54320
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (\`git checkout -b feature/amazing-feature\`)
+3. Commit your changes (\`git commit -m 'feat: add amazing feature'\`)
+4. Push to the branch (\`git push origin feature/amazing-feature\`)
+5. Open a Pull Request
 
 ## 📄 License
 
-By contributing to memU-server, you agree that your contributions will be licensed under the **AGPL-3.0 License**.
+See [LICENSE](LICENSE) file for details.
 
----
+## 🙏 Acknowledgments
 
-## 🌍 Community
-
-For more information please contact info@nevamind.ai
-
-- GitHub Issues: Report bugs, request features, and track development. [Submit an issue](https://github.com/NevaMind-AI/memU-server/issues)
-- Discord: Get real-time support, chat with the community, and stay updated. [Join us](https://discord.com/invite/hQZntfGsbJ)
-- X (Twitter): Follow for updates, AI insights, and key announcements. [Follow us](https://x.com/memU_ai)
+- [memu-py](https://github.com/mem0ai/memu-py) - Core memory management engine
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern web framework
+- [Temporal](https://temporal.io/) - Workflow orchestration
+- [pgvector](https://github.com/pgvector/pgvector) - Vector similarity search

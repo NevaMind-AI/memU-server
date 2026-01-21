@@ -1,0 +1,77 @@
+# Pre-commit hooks configuration
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.13
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+      # Run the formatter
+      - id: ruff-format
+
+  # Built-in hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+        name: Check YAML syntax
+      - id: check-json
+        name: Check JSON syntax
+      - id: check-toml
+        name: Check TOML syntax
+      - id: end-of-file-fixer
+        name: Fix end of files
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+      - id: detect-private-key
+        name: Detect private keys
+
+  # Python-specific checks
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-check-blanket-noqa
+        name: Check blanket noqa
+      - id: python-check-blanket-type-ignore
+        name: Check blanket type ignore
+      - id: python-no-eval
+        name: Check for eval()
+      - id: python-use-type-annotations
+        name: Check for type annotations
+
+  # Security checks with bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.3
+    hooks:
+      - id: bandit
+        name: Security check with bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+
+# Global settings
+default_language_version:
+  python: python3.13
+
+# Files to exclude
+exclude: |
+  (?x)^(
+      \.venv/|
+      venv/|
+      \.git/|
+      __pycache__/|
+      \.pytest_cache/|
+      \.ruff_cache/|
+      \.mypy_cache/|
+      build/|
+      dist/|
+      .*\.egg-info/
+  )
