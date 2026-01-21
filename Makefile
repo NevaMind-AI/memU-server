@@ -1,4 +1,4 @@
-.PHONY: help install dev test check format lint clean run docker-up docker-down migrate pre-commit-install pre-commit-run
+.PHONY: help install dev test check format lint clean run docker-up docker-down migrate pre-commit-install pre-commit-run migrate-check
 
 # Default target
 help:
@@ -15,6 +15,7 @@ help:
 	@echo "  make docker-up          - Start Docker services"
 	@echo "  make docker-down        - Stop Docker services"
 	@echo "  make migrate            - Run database migrations"
+	@echo "  make migrate-check      - Check migrations for empty content"
 	@echo "  make pre-commit-install - Install pre-commit hooks"
 	@echo "  make pre-commit-run     - Run pre-commit on all files"
 
@@ -83,6 +84,12 @@ migrate-down:
 migrate-create:
 	@read -p "Enter migration description: " desc; \
 	alembic revision --autogenerate -m "$$desc"
+	@echo "⚠️  Don't forget to review the generated migration file!"
+	@python .pre-commit-hooks/check_alembic_migrations.py || true
+
+# Check migrations for issues
+migrate-check:
+	@python .pre-commit-hooks/check_alembic_migrations.py
 
 # Install pre-commit hooks
 pre-commit-install:

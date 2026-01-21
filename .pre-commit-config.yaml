@@ -67,6 +67,12 @@ repos:
         types: [python]
         args: ['--rcfile=pyproject.toml', '--fail-under=8.0']
         require_serial: true
+      - id: check-alembic-migrations
+        name: Check Alembic migrations are not empty
+        entry: python .pre-commit-hooks/check_alembic_migrations.py
+        language: system
+        pass_filenames: false
+        files: ^alembic/versions/.*\.py$
 
 # Global settings
 default_language_version:
