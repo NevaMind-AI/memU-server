@@ -73,7 +73,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^alembic/versions/.*\.py$
-
+      - id: check-config-credentials
+        name: Check config files for hardcoded credentials
+        entry: python .pre-commit-hooks/check_config_credentials.py
+        language: system
+        pass_filenames: false
+        types_or: [ini, yaml, toml]
 # Global settings
 default_language_version:
   python: python3.13
