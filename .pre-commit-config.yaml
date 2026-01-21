@@ -86,6 +86,12 @@ repos:
         language: system
         pass_filenames: false
         types_or: [ini, yaml, toml]
+      - id: check-makefile-commands
+        name: Check Makefile for deprecated commands
+        entry: python .pre-commit-hooks/check_makefile_commands.py
+        language: system
+        pass_filenames: false
+        files: ^Makefile$
 # Global settings
 default_language_version:
   python: python3.13

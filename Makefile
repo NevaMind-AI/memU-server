@@ -22,11 +22,11 @@ help:
 
 # Install production dependencies
 install:
-	uv pip install -e .
+	uv sync --no-dev
 
 # Install development dependencies
 dev:
-	uv pip install -e ".[dev]"
+	uv sync
 
 # Run tests
 test:
