@@ -55,6 +55,22 @@ packages = ["app"]
 line-length = 120
 target-version = "py313"
 
+[tool.ruff.lint]
+# Enable import sorting checks
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "config"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

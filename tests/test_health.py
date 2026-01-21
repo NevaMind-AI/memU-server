@@ -4,11 +4,10 @@ import os
 
 from fastapi.testclient import TestClient
 
-
 # Set required environment variables for testing before importing app
 os.environ["OPENAI_API_KEY"] = "test-key-for-testing"
 
-from app.main import app  # noqa: E402
+from app.main import app  # noqa: E402  # pylint: disable=wrong-import-position
 
 client = TestClient(app)
 

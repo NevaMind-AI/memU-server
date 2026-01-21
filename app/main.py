@@ -1,11 +1,12 @@
 import json
 import os
-from pathlib import Path
 import traceback
-from typing import Any, Dict
 import uuid
-from fastapi.responses import JSONResponse
+from pathlib import Path
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from memu.app import MemoryService
 
 app = FastAPI(title="memU Server", version="0.1.0")
@@ -41,7 +42,7 @@ storage_dir.mkdir(parents=True, exist_ok=True)
 
 
 @app.post("/memorize")
-async def memorize(payload: Dict[str, Any]):
+async def memorize(payload: dict[str, Any]):
     try:
         file_path = storage_dir / f"conversation-{uuid.uuid4().hex}.json"
         with file_path.open("w", encoding="utf-8") as f:
@@ -55,7 +56,7 @@ async def memorize(payload: Dict[str, Any]):
 
 
 @app.post("/retrieve")
-async def retrieve(payload: Dict[str, Any]):
+async def retrieve(payload: dict[str, Any]):
     if "query" not in payload:
         raise HTTPException(status_code=400, detail="Missing 'query' in request body")
     try:
