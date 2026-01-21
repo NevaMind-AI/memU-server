@@ -1,4 +1,4 @@
-.PHONY: help install dev test check format lint clean run docker-up docker-down migrate pre-commit-install pre-commit-run migrate-check
+.PHONY: help install dev test test-cov check format lint clean run docker-up docker-down migrate pre-commit-install pre-commit-run migrate-check
 
 # Default target
 help:
@@ -6,6 +6,7 @@ help:
 	@echo "  make install            - Install dependencies"
 	@echo "  make dev                - Install dev dependencies"
 	@echo "  make test               - Run tests"
+	@echo "  make test-cov           - Run tests with coverage report"
 	@echo "  make check              - Run all quality checks (format, lint, test)"
 	@echo "  make format             - Format code with ruff"
 	@echo "  make format-check       - Check code formatting without changes"
@@ -30,6 +31,11 @@ dev:
 # Run tests
 test:
 	@pytest -v || echo "⚠️  No tests found or tests failed"
+
+# Run tests with coverage
+test-cov:
+	@echo "🔍 Running tests with coverage..."
+	@pytest --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=80 tests/
 
 # Run all quality checks
 check: format-check lint test

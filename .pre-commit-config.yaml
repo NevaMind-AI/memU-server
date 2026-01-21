@@ -67,6 +67,13 @@ repos:
         types: [python]
         args: ['--rcfile=pyproject.toml', '--fail-under=8.0']
         require_serial: true
+      - id: check-test-coverage
+        name: Check test coverage threshold
+        entry: python .pre-commit-hooks/check_test_coverage.py
+        language: system
+        pass_filenames: false
+        args: ['35']  # Minimum 35% coverage (gradually increase as tests are added)
+        stages: [pre-push]  # Only run before pushing, not on every commit
       - id: check-alembic-migrations
         name: Check Alembic migrations are not empty
         entry: python .pre-commit-hooks/check_alembic_migrations.py
