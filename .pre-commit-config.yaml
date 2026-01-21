@@ -92,6 +92,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^Makefile$
+      - id: check-markdown-formatting
+        name: Check Markdown formatting issues
+        entry: python .pre-commit-hooks/check_markdown_formatting.py
+        language: system
+        pass_filenames: false
+        types: [markdown]
 # Global settings
 default_language_version:
   python: python3.13

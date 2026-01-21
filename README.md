@@ -40,10 +40,10 @@ memU-server is the backend management service for MemU, responsible for providin
 ```bash
 git clone https://github.com/NevaMind-AI/memU-server.git
 cd memU-server
-\`\`\`
+```
 
 2. **Set up Python environment**
-\`\`\`bash
+```bash
 # Create virtual environment with uv (recommended)
 uv venv
 source .venv/bin/activate
@@ -51,45 +51,45 @@ source .venv/bin/activate
 # Or with standard venv
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-\`\`\`
+```
 
 3. **Install dependencies**
-\`\`\`bash
+```bash
 # With uv (fast)
 uv pip install -e .
 
 # Or with pip
 pip install -e .
-\`\`\`
+```
 
 4. **Configure environment**
-\`\`\`bash
+```bash
 cp .env.example .env
 # Edit .env with your configuration
-\`\`\`
+```
 
 5. **Start infrastructure services**
-\`\`\`bash
+```bash
 docker compose up -d
-\`\`\`
+```
 
 This will start:
 - PostgreSQL with pgvector on port 54320
 - Temporal server on ports 17233 (gRPC) and 18233 (Web UI)
 
 6. **Run database migrations**
-\`\`\`bash
+```bash
 alembic upgrade head
-\`\`\`
+```
 
 7. **Start the server**
-\`\`\`bash
+```bash
 # Development mode with auto-reload
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Or in background
 nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
-\`\`\`
+```
 
 The API will be available at:
 - API: http://localhost:8000
@@ -100,7 +100,7 @@ The API will be available at:
 
 Key environment variables in \`.env\`:
 
-\`\`\`bash
+```bash
 # Database
 DATABASE_HOST=localhost
 DATABASE_PORT=54320
@@ -125,13 +125,13 @@ EMBEDDING_MODEL=voyage-3.5-lite
 
 # Storage
 STORAGE_PATH=/var/data/memu-server
-\`\`\`
+```
 
 ## 🧪 Testing
 
 Run tests with pytest or make:
 
-\`\`\`bash
+```bash
 # Run all tests
 pytest
 
@@ -143,7 +143,7 @@ pytest --cov=app --cov-report=html
 
 # Run specific test file
 pytest tests/test_health.py -v
-\`\`\`
+```
 
 ## 🔧 Code Quality
 
@@ -225,39 +225,10 @@ git commit -m "your message"
 - File size limits
 - Merge conflicts
 
-\`\`\`bash
-# Show all available commands
-make help
-
-# Run all quality checks (format, lint, test)
-make check
-
-# Format code with ruff
-make format
-
-# Check formatting without changes
-make format-check
-
-# Lint code
-make lint
-
-# Run tests
-make test
-
-# Install dependencies
-make install
-
-# Install dev dependencies
-make dev
-
-# Clean cache files
-make clean
-\`\`\`
-
 **Before committing code, always run:**
-\`\`\`bash
+```bash
 make check
-\`\`\`
+```
 
 This will ensure your code is properly formatted, linted, and all tests pass.
 
@@ -275,27 +246,27 @@ Tracks async memory processing tasks with status and results.
 ## 🔄 API Endpoints
 
 ### Memorize
-\`\`\`bash
+```bash
 POST /memorize
-\`\`\`
+```
 Store new memory asynchronously.
 
 ### Retrieve
-\`\`\`bash
+```bash
 POST /retrieve
-\`\`\`
+```
 Query and retrieve relevant memories.
 
 ### Health Check
-\`\`\`bash
+```bash
 GET /
-\`\`\`
+```
 Returns service status.
 
 ## 🛠️ Development
 
 ### Project Structure
-\`\`\`
+```
 memU-server/
 ├── app/
 │   ├── api/          # API routes
@@ -312,11 +283,11 @@ memU-server/
 ├── docker-compose.yml
 ├── pyproject.toml
 └── README.md
-\`\`\`
+```
 
 ### Code Quality
 
-\`\`\`bash
+```bash
 # Format code with ruff
 ruff format .
 
@@ -325,11 +296,11 @@ ruff check .
 
 # Type checking (if mypy is installed)
 mypy app/
-\`\`\`
+```
 
 ### Database Migrations
 
-\`\`\`bash
+```bash
 # Create a new migration
 alembic revision --autogenerate -m "description"
 
@@ -341,13 +312,13 @@ alembic downgrade -1
 
 # View migration history
 alembic history
-\`\`\`
+```
 
 ## 🐳 Docker
 
 Build and run with Docker:
 
-\`\`\`bash
+```bash
 # Build image
 docker build -f dockerfiles/Dockerfile -t memu-server .
 
@@ -357,7 +328,7 @@ docker run -d \
   -p 8000:8000 \
   --env-file .env \
   memu-server
-\`\`\`
+```
 
 ## 📊 Monitoring
 
