@@ -40,6 +40,8 @@ dev = [
     "ruff>=0.11.0",
     "pre-commit>=4.0.0",
     "bandit[toml]>=1.8.0",
+    "pylint>=3.0.0",
+    "mypy>=1.8.0",
 ]
 
 [build-system]
@@ -59,4 +61,18 @@ testpaths = ["tests"]
 
 [tool.bandit]
 exclude_dirs = [".venv", "venv", "tests", ".git", "__pycache__"]
-skips = ["B101"]  # Skip assert_used check (common in tests)
+# B105: hardcoded_password_string
+# B106: hardcoded_password_funcarg
+# B107: hardcoded_password_default
+skips = []
+
+[tool.pylint.messages_control]
+disable = ["C0111", "C0103"]  # missing-docstring, invalid-name
+enable = ["W0102", "W0212", "W0611"]  # dangerous-default-value, protected-access, unused-import
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Gradually enable
+ignore_missing_imports = true

@@ -47,6 +47,8 @@ format-check:
 lint:
 	@echo "🔍 Linting code..."
 	ruff check .
+	@echo "🔍 Running pylint..."
+	pylint app/ --fail-under=8.0 || true
 
 # Clean cache and build files
 clean:

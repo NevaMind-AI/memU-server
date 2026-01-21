@@ -51,7 +51,7 @@ async def memorize(payload: Dict[str, Any]):
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.post("/retrieve")
@@ -62,7 +62,7 @@ async def retrieve(payload: Dict[str, Any]):
         result = await service.retrieve([payload["query"]])
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.get("/")

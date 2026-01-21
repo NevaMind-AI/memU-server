@@ -57,6 +57,17 @@ repos:
         args: ['-c', 'pyproject.toml']
         additional_dependencies: ['bandit[toml]']
 
+  # Additional Python quality checks
+  - repo: local
+    hooks:
+      - id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [python]
+        args: ['--rcfile=pyproject.toml', '--fail-under=8.0']
+        require_serial: true
+
 # Global settings
 default_language_version:
   python: python3.13
