@@ -86,6 +86,12 @@ repos:
         language: system
         pass_filenames: false
         types_or: [ini, yaml, toml]
+      - id: check-python-credentials
+        name: Check Python code for hardcoded credentials
+        entry: python .pre-commit-hooks/check_python_credentials.py
+        language: system
+        pass_filenames: false
+        types: [python]
       - id: check-makefile-commands
         name: Check Makefile for deprecated commands
         entry: python .pre-commit-hooks/check_makefile_commands.py

@@ -20,6 +20,14 @@ if not openai_api_key:
     )
 
 # Initialize MemoryService with proper configuration
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    raise RuntimeError(
+        "DATABASE_URL environment variable is not set. "
+        "Please set DATABASE_URL to your PostgreSQL connection string. "
+        "Example: postgresql+psycopg://user:pass@localhost:54320/dbname"
+    )
+
 service = MemoryService(
     llm_profiles={
         "default": {
@@ -29,12 +37,7 @@ service = MemoryService(
             "model": os.getenv("DEFAULT_LLM_MODEL", "gpt-4o-mini"),
         }
     },
-    database_config={
-        "url": os.getenv(
-            "DATABASE_URL",
-            "postgresql+psycopg://memu_user:memu_pass@localhost:54320/memu_db",
-        )
-    },
+    database_config={"url": database_url},
 )
 
 storage_dir = Path(os.getenv("STORAGE_PATH", "./data"))
