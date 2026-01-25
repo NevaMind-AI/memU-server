@@ -681,7 +681,7 @@ wheels = [
 
 [[package]]
 name = "memu-py"
-version = "1.2.0"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
@@ -693,7 +693,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "sqlmodel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/f9/31bca0ad12a34decdb4a3635edaae44ba210a9ebb7ec0e0fdce7c9cfd0de/memu_py-1.2.0.tar.gz", hash = "sha256:c6a6de33cfa177206fb1b847f5b048313230b2635c99285e5e2eb26ab3a7be59", size = 11634900, upload-time = "2026-01-14T15:00:23.548Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/79/3b6ee40521ec82c897c21e258d4d38dddb106d7012990ccb13d4992f3f3b/memu_py-0.6.0.tar.gz", hash = "sha256:8ccfa005cce9603128f90a282d38494b3db1a1eb1a1a2f8b29bc7bf3ef5c5109", size = 2921827, upload-time = "2025-11-20T18:38:50.836Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c3/d5/d2f4a11b9dda10c45f0db357e4b47717f6abdebc6136045a1810f3e3bed1/memu_py-1.2.0-cp313-abi3-macosx_10_12_x86_64.whl", hash = "sha256:a5bd27d66c03f0712883842b10534dc5566682bd92a4f72dd77ee8cd70adb4e7", size = 349894, upload-time = "2026-01-14T15:00:16.194Z" },
     { url = "https://files.pythonhosted.org/packages/dc/11/610367bdd202b7ad936aadefbea0b42cb40cf654eb01ef7a61c5c1e56d69/memu_py-1.2.0-cp313-abi3-macosx_11_0_arm64.whl", hash = "sha256:68969c37578fa176f926e6b462c941427553637fef47f6530fe5d1975c53b317", size = 347458, upload-time = "2026-01-14T15:00:17.58Z" },
@@ -715,7 +715,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "fastapi", extra = ["standard"] },
-    { name = "memu-py", extra = ["postgres"] },
+    { name = "memu-py" },
     { name = "openai" },
     { name = "pendulum" },
     { name = "pgvector" },
@@ -745,7 +745,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.16.2" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.121.0" },
-    { name = "memu-py", extras = ["postgres"], specifier = ">=1.2.0" },
+    { name = "memu-py", specifier = "==0.6.0" },
     { name = "openai", specifier = ">=1.54.4" },
     { name = "pendulum", specifier = ">=3.1.0" },
     { name = "pgvector", specifier = ">=0.3.2" },
