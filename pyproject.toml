@@ -4,12 +4,90 @@ version = "0.1.0"
 description = "backend wrapper for memU"
 readme = "README.md"
 requires-python = ">=3.14"
+
 dependencies = [
+    # Web Framework
     "fastapi[standard]>=0.122.0",
     "memu-py==0.6.0",
+    "uvicorn[standard]>=0.35.0",
+
+    # Database & ORM
+    "sqlmodel>=0.0.27",
+    "sqlalchemy[asyncio]>=2.0.41",
+    "psycopg[binary,pool]>=3.2.9",
+    "alembic>=1.16.2",
+    "pgvector>=0.3.2",
+
+    # Workflow Engine
+    "temporalio==1.16.0",
+
+    # LLM & AI
+    "openai>=1.54.4",
+
+    # Configuration & Utils
+    "pydantic-settings>=2.10.1",
+    "python-dotenv>=1.0.0",
+    "pendulum>=3.1.0",
 ]
 
 [dependency-groups]
 dev = [
-    "requests>=2.32.5",
+    "pytest>=7.2.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.27.0",
+    "ruff>=0.11.0",
+    "pre-commit>=4.0.0",
+    "bandit[toml]>=1.8.0",
+    "pylint>=3.0.0",
+    "mypy>=1.8.0",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+# Enable import sorting checks
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "config"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.bandit]
+exclude_dirs = [".venv", "venv", "tests", ".git", "__pycache__"]
+# B105: hardcoded_password_string
+# B106: hardcoded_password_funcarg
+# B107: hardcoded_password_default
+skips = []
+
+[tool.pylint.messages_control]
+disable = ["C0111", "C0103"]  # missing-docstring, invalid-name
+enable = ["W0102", "W0212", "W0611"]  # dangerous-default-value, protected-access, unused-import
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Gradually enable
+ignore_missing_imports = true
