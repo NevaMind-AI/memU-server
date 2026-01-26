@@ -30,6 +30,7 @@ jobs:
 
       - name: Run quality checks
         run: |
+          uv lock --locked
           uv run pre-commit run --all-files
           uv run mypy
           uv run deptry app

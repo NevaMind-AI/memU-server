@@ -31,6 +31,7 @@ install:
 	@uv sync
 	@echo "🚀 Installing pre-commit hooks"
 	@uv run pre-commit install
+	@echo "✅ Note: Run 'uv lock' separately if you modified pyproject.toml"
 
 # =========================
 # Development
