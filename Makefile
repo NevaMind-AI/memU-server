@@ -33,8 +33,18 @@ run:
 
 # Start Docker services
 docker-up:
+	@if [ ! -f docker-compose.yml ] && [ ! -f docker-compose.yaml ]; then \
+		echo "⚠️  Docker compose configuration not found in this repository."; \
+		echo "Please add a docker-compose.yml/docker-compose.yaml file or update the 'docker-up' target."; \
+		exit 1; \
+	fi
 	docker compose up -d
 
 # Stop Docker services
 docker-down:
+	@if [ ! -f docker-compose.yml ] && [ ! -f docker-compose.yaml ]; then \
+		echo "⚠️  Docker compose configuration not found in this repository."; \
+		echo "Please add a docker-compose.yml/docker-compose.yaml file or update the 'docker-down' target."; \
+		exit 1; \
+	fi
 	docker compose down
