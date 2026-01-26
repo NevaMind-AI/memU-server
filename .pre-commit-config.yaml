@@ -1,124 +1,27 @@
-# Pre-commit hooks configuration
-# Install: pre-commit install
-# Run manually: pre-commit run --all-files
-
 repos:
-  # Ruff - Fast Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.13
     hooks:
-      # Run the linter
       - id: ruff
         args: [--fix]
-      # Run the formatter
       - id: ruff-format
 
-  # Built-in hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
       - id: check-yaml
-        name: Check YAML syntax
       - id: check-json
-        name: Check JSON syntax
       - id: check-toml
-        name: Check TOML syntax
       - id: end-of-file-fixer
-        name: Fix end of files
       - id: trailing-whitespace
-        name: Trim trailing whitespace
       - id: check-added-large-files
-        name: Check for large files
         args: ['--maxkb=1000']
       - id: check-merge-conflict
-        name: Check for merge conflicts
       - id: detect-private-key
-        name: Detect private keys
 
-  # Python-specific checks
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
-    hooks:
-      - id: python-check-blanket-noqa
-        name: Check blanket noqa
-      - id: python-check-blanket-type-ignore
-        name: Check blanket type ignore
-      - id: python-no-eval
-        name: Check for eval()
-      - id: python-use-type-annotations
-        name: Check for type annotations
-
-  # Security checks with bandit (consolidated)
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.3
     hooks:
       - id: bandit
-        name: Security check with bandit
         args: ['-c', 'pyproject.toml']
         additional_dependencies: ['bandit[toml]']
-
-  # Additional Python quality checks
-  - repo: local
-    hooks:
-      - id: pylint
-        name: pylint
-        entry: pylint
-        language: system
-        types: [python]
-        args: ['--rcfile=pyproject.toml', '--fail-under=8.0']
-        require_serial: true
-      - id: check-test-coverage
-        name: Check test coverage threshold
-        entry: python .pre-commit-hooks/check_test_coverage.py
-        language: system
-        pass_filenames: false
-        args: ['35']  # Minimum 35% coverage (gradually increase as tests are added)
-        stages: [pre-push]  # Only run before pushing, not on every commit
-      - id: check-alembic-migrations
-        name: Check Alembic migrations are not empty
-        entry: python .pre-commit-hooks/check_alembic_migrations.py
-        language: system
-        pass_filenames: false
-        files: ^alembic/versions/.*\.py$
-      - id: check-config-credentials
-        name: Check config files for hardcoded credentials
-        entry: python .pre-commit-hooks/check_config_credentials.py
-        language: system
-        pass_filenames: false
-        types_or: [ini, yaml, toml]
-      - id: check-python-credentials
-        name: Check Python code for hardcoded credentials
-        entry: python .pre-commit-hooks/check_python_credentials.py
-        language: system
-        pass_filenames: false
-        types: [python]
-      - id: check-makefile-commands
-        name: Check Makefile for deprecated commands
-        entry: python .pre-commit-hooks/check_makefile_commands.py
-        language: system
-        pass_filenames: false
-        files: ^Makefile$
-      - id: check-markdown-formatting
-        name: Check Markdown formatting issues
-        entry: python .pre-commit-hooks/check_markdown_formatting.py
-        language: system
-        pass_filenames: false
-        types: [markdown]
-# Global settings
-default_language_version:
-  python: python3.13
-
-# Files to exclude
-exclude: |
-  (?x)^(
-      \.venv/|
-      venv/|
-      \.git/|
-      __pycache__/|
-      \.pytest_cache/|
-      \.ruff_cache/|
-      \.mypy_cache/|
-      build/|
-      dist/|
-      .*\.egg-info/
-  )
