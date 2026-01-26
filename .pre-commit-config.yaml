@@ -23,5 +23,5 @@ repos:
     rev: 1.9.3
     hooks:
       - id: bandit
-        args: ['-r', '.', '-ll']
+        args: ['-ll']
         files: \.py$

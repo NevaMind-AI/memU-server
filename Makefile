@@ -29,7 +29,7 @@ clean:
 
 # Run the development server
 run:
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	uv run fastapi dev
 
 # Start Docker services
 docker-up:
