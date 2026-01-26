@@ -1,4 +1,4 @@
-.PHONY: help install dev clean run check test docker-up docker-down
+.PHONY: help install clean run check test docker-up docker-down
 
 # =========================
 # Help
@@ -7,8 +7,7 @@ help:
 	@echo "Available commands:"
 	@echo ""
 	@echo "🛠️  Environment & Setup"
-	@echo "  make install       - Install dependencies & setup pre-commit (team standard)"
-	@echo "  make dev           - Install dev dependencies only"
+	@echo "  make install       - Install dependencies & setup pre-commit"
 	@echo ""
 	@echo "🚀 Development"
 	@echo "  make run           - Run FastAPI development server"
@@ -33,11 +32,6 @@ install:
 	@echo "🚀 Installing pre-commit hooks"
 	@uv run pre-commit install
 
-# Dev-only install (fast local setup)
-dev:
-	@echo "🚀 Installing dev dependencies"
-	@uv sync
-
 # =========================
 # Development
 # =========================
@@ -60,17 +54,17 @@ check:
 
 test:
 	@echo "🚀 Running tests with coverage"
-	@uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml
+	@uv run python -m pytest --cov=app --cov-report=xml
 
 # =========================
 # Cleanup
 # =========================
 clean:
 	@echo "🧹 Cleaning cache and build artifacts"
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "__pycache__" -exec rm -rf {} \; 2>/dev/null || true
+	find . -type d -name ".pytest_cache" -exec rm -rf {} \; 2>/dev/null || true
+	find . -type d -name ".ruff_cache" -exec rm -rf {} \; 2>/dev/null || true
+	find . -type d -name "*.egg-info" -exec rm -rf {} \; 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 	rm -rf dist/ build/ .coverage htmlcov/
 
