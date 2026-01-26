@@ -56,7 +56,7 @@ check:
 	@echo "🚀 Running static type checks (mypy)"
 	@uv run mypy
 	@echo "🚀 Checking for obsolete dependencies (deptry)"
-	@uv run deptry src
+	@uv run deptry app
 
 test:
 	@echo "🚀 Running tests with coverage"

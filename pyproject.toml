@@ -41,6 +41,7 @@ dev = [
     "bandit[toml]>=1.8.0",
     "pylint>=3.0.0",
     "mypy>=1.8.0",
+    "deptry>=0.16.0",
 ]
 
 [build-system]
