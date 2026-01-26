@@ -32,7 +32,7 @@ jobs:
         run: |
           uv lock --locked
           uv run pre-commit run --all-files
-          uv run mypy
+          uv run mypy app
           uv run deptry app
 
       - name: Run tests with coverage

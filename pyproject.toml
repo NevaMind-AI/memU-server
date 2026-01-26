@@ -107,6 +107,7 @@ enable = ["W0102", "W0212", "W0611"]  # dangerous-default-value, protected-acces
 
 [tool.mypy]
 python_version = "3.14"
+files = ["app"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Gradually enable
