@@ -53,7 +53,7 @@ packages = ["app"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 # Enable import sorting checks
@@ -75,6 +75,25 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
 [tool.bandit]
 exclude_dirs = [".venv", "venv", "tests", ".git", "__pycache__"]
 # B105: hardcoded_password_string
@@ -87,7 +106,7 @@ disable = ["C0111", "C0103"]  # missing-docstring, invalid-name
 enable = ["W0102", "W0212", "W0611"]  # dangerous-default-value, protected-access, unused-import
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Gradually enable
