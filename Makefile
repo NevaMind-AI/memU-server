@@ -1,24 +1,14 @@
-.PHONY: help install dev test test-cov check format lint clean run docker-up docker-down migrate pre-commit-install pre-commit-run migrate-check
+.PHONY: help install dev clean run docker-up docker-down
 
 # Default target
 help:
 	@echo "Available commands:"
-	@echo "  make install            - Install dependencies"
-	@echo "  make dev                - Install dev dependencies"
-	@echo "  make test               - Run tests"
-	@echo "  make test-cov           - Run tests with coverage report"
-	@echo "  make check              - Run all quality checks (format, lint, test)"
-	@echo "  make format             - Format code with ruff"
-	@echo "  make format-check       - Check code formatting without changes"
-	@echo "  make lint               - Lint code with ruff"
-	@echo "  make clean              - Clean cache and build files"
-	@echo "  make run                - Run the server"
-	@echo "  make docker-up          - Start Docker services"
-	@echo "  make docker-down        - Stop Docker services"
-	@echo "  make migrate            - Run database migrations"
-	@echo "  make migrate-check      - Check migrations for empty content"
-	@echo "  make pre-commit-install - Install pre-commit hooks"
-	@echo "  make pre-commit-run     - Run pre-commit on all files"
+	@echo "  make install      - Install production dependencies"
+	@echo "  make dev          - Install dev dependencies"
+	@echo "  make clean        - Clean cache and build files"
+	@echo "  make run          - Run the development server"
+	@echo "  make docker-up    - Start Docker services"
+	@echo "  make docker-down  - Stop Docker services"
 
 # Install production dependencies
 install:
@@ -27,35 +17,6 @@ install:
 # Install development dependencies
 dev:
 	uv sync
-
-# Run tests
-test:
-	@pytest -v
-
-# Run tests with coverage
-test-cov:
-	@echo "🔍 Running tests with coverage..."
-	@pytest --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=70 tests/
-
-# Run all quality checks
-check: format-check lint test
-	@echo "✅ All quality checks passed!"
-
-# Format code
-format:
-	ruff format .
-
-# Check formatting without making changes
-format-check:
-	@echo "🔍 Checking code formatting..."
-	ruff format --check .
-
-# Lint code
-lint:
-	@echo "🔍 Linting code..."
-	ruff check .
-	@echo "🔍 Running pylint..."
-	pylint app/ --fail-under=8.0 || true
 
 # Clean cache and build files
 clean:
@@ -77,43 +38,3 @@ docker-up:
 # Stop Docker services
 docker-down:
 	docker compose down
-
-# Run database migrations
-migrate:
-	alembic upgrade head
-
-# Run migrations rollback
-migrate-down:
-	alembic downgrade -1
-
-# Create a new migration
-migrate-create:
-	@read -p "Enter migration description: " desc; \
-	alembic revision --autogenerate -m "$$desc"
-	@echo "⚠️  Don't forget to review the generated migration file!"
-	@if [ -f .pre-commit-hooks/check_alembic_migrations.py ]; then \
-		python .pre-commit-hooks/check_alembic_migrations.py || true; \
-	else \
-		echo "ℹ️  Migration check script not found; skipping additional checks."; \
-	fi
-
-# Check migrations for issues
-migrate-check:
-	@if [ -f .pre-commit-hooks/check_alembic_migrations.py ]; then \
-		python .pre-commit-hooks/check_alembic_migrations.py; \
-	else \
-		echo "❌ Migration check script not found at .pre-commit-hooks/check_alembic_migrations.py"; \
-		exit 1; \
-	fi
-
-# Install pre-commit hooks
-pre-commit-install:
-	@echo "📦 Installing pre-commit..."
-	uv pip install pre-commit
-	pre-commit install
-	@echo "✅ Pre-commit hooks installed! They will run automatically on git commit."
-
-# Run pre-commit on all files
-pre-commit-run:
-	@echo "🔍 Running pre-commit checks on all files..."
-	pre-commit run --all-files
