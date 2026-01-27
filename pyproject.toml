@@ -105,6 +105,23 @@ skips = []
 disable = ["C0111", "C0103"]  # missing-docstring, invalid-name
 enable = ["W0102", "W0212", "W0611"]  # dangerous-default-value, protected-access, unused-import
 
+[tool.deptry]
+# Ignore dependencies that are planned for future use but not yet implemented
+[tool.deptry.per_rule_ignores]
+DEP002 = [
+    "uvicorn",           # Will be used for production deployment
+    "sqlmodel",          # Planned for database models
+    "sqlalchemy",        # Database ORM (used by sqlmodel)
+    "psycopg",           # PostgreSQL adapter
+    "alembic",           # Database migrations
+    "pgvector",          # Vector database support
+    "temporalio",        # Planned for workflow orchestration
+    "openai",            # AI functionality (may be used indirectly via memu-py)
+    "pydantic-settings", # Configuration management (future use)
+    "python-dotenv",     # Environment variables (future use)
+    "pendulum",          # Date/time handling (future use)
+]
+
 [tool.mypy]
 python_version = "3.14"
 files = ["app"]
