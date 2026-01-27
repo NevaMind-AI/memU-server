@@ -3,12 +3,12 @@ name = "memu-server"
 version = "0.1.0"
 description = "backend wrapper for memU"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 
 dependencies = [
     # Web Framework
     "fastapi[standard]>=0.122.0",
-    "memu-py==0.6.0",
+    "memu-py>=1.2.0",
     "uvicorn[standard]>=0.35.0",
 
     # Database & ORM
@@ -41,6 +41,7 @@ dev = [
     "bandit[toml]>=1.8.0",
     "pylint>=3.0.0",
     "mypy>=1.8.0",
+    "deptry>=0.16.0",
 ]
 
 [build-system]
@@ -74,6 +75,25 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
 [tool.bandit]
 exclude_dirs = [".venv", "venv", "tests", ".git", "__pycache__"]
 # B105: hardcoded_password_string
@@ -85,8 +105,26 @@ skips = []
 disable = ["C0111", "C0103"]  # missing-docstring, invalid-name
 enable = ["W0102", "W0212", "W0611"]  # dangerous-default-value, protected-access, unused-import
 
+[tool.deptry]
+# Ignore dependencies that are planned for future use but not yet implemented
+[tool.deptry.per_rule_ignores]
+DEP002 = [
+    "uvicorn",           # Will be used for production deployment
+    "sqlmodel",          # Planned for database models
+    "sqlalchemy",        # Database ORM (used by sqlmodel)
+    "psycopg",           # PostgreSQL adapter
+    "alembic",           # Database migrations
+    "pgvector",          # Vector database support
+    "temporalio",        # Planned for workflow orchestration
+    "openai",            # AI functionality (may be used indirectly via memu-py)
+    "pydantic-settings", # Configuration management (future use)
+    "python-dotenv",     # Environment variables (future use)
+    "pendulum",          # Date/time handling (future use)
+]
+
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.13"
+files = ["app"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Gradually enable
