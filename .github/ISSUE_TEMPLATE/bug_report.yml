@@ -54,7 +54,7 @@ body:
       description: Please provide information about your environment
       placeholder: |
         - OS: [e.g. Ubuntu 20.04]
-        - Python Version: [e.g. 3.14]
+        - Python Version: [e.g. 3.13]
         - memU-server Version: [e.g. 1.0.0]
     validations:
       required: false

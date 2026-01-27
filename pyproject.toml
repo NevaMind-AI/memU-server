@@ -3,12 +3,12 @@ name = "memu-server"
 version = "0.1.0"
 description = "backend wrapper for memU"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 
 dependencies = [
     # Web Framework
     "fastapi[standard]>=0.122.0",
-    "memu-py==0.6.0",
+    "memu-py>=1.2.0",
     "uvicorn[standard]>=0.35.0",
 
     # Database & ORM
@@ -53,7 +53,7 @@ packages = ["app"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py314"
+target-version = "py313"
 
 [tool.ruff.lint]
 # Enable import sorting checks
@@ -123,7 +123,7 @@ DEP002 = [
 ]
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.13"
 files = ["app"]
 warn_return_any = true
 warn_unused_configs = true
