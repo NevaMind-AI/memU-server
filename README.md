@@ -35,6 +35,36 @@ Star memU-server to get notified about new releases and join our growing communi
    ```
    The server runs on `http://127.0.0.1:8000`.
 
+### Run with Docker Compose (Local Development)
+Start the full local development environment with PostgreSQL and Temporal:
+
+```bash
+# Start all services (PostgreSQL, Temporal, Temporal UI)
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+**Services:**
+| Service | Port | Description |
+|---------|------|-------------|
+| PostgreSQL | 5432 | Database with pgvector extension |
+| Temporal | 7233 | Workflow engine gRPC API |
+| Temporal UI | 8088 | Web management interface |
+
+**Default Configuration:**
+- PostgreSQL: `postgres:postgres@localhost:5432/memu`
+- Temporal Database: `temporal` (separate from app database)
+
+**Environment Variables (optional `.env` file):**
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=memu
+TEMPORAL_DB=temporal
+```
+
 ### Run with Docker
 1. Export your OpenAI API key so Docker can read it:
    ```bash

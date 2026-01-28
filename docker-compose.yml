@@ -19,10 +19,13 @@ services:
       - memu-network
 
   # Temporal server
-  # Note: Temporal uses the same database as the main app.
-  # TODO: For production, use a separate Temporal database or at minimum use
-  # different schemas within the same PostgreSQL instance. Sharing the same
-  # database can cause schema conflicts and is not recommended even for development.
+  # Note: Temporal shares the same PostgreSQL instance as the main app but uses
+  # a separate database (`TEMPORAL_DB`, default: `temporal`) from the app's
+  # database (`POSTGRES_DB`, default: `memu`).
+  # TODO: For production, consider using a separate PostgreSQL instance for Temporal
+  # or at minimum keep Temporal and the app in separate databases as configured here.
+  # Pointing both services at the same database can cause schema conflicts and is
+  # not recommended.
   temporal:
     image: temporalio/auto-setup:1.25.1
     depends_on:
