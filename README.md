@@ -54,7 +54,7 @@ docker compose logs -f
 | Temporal UI | 8088 | Web management interface |
 
 **Default Configuration:**
-- PostgreSQL: `postgres:postgres@localhost:5432/memu`
+- PostgreSQL DSN: `postgresql://postgres:postgres@localhost:5432/memu`
 - Temporal Database: `temporal` (separate from app database)
 
 **Environment Variables (optional `.env` file):**
