@@ -2,17 +2,16 @@ services:
   # PostgreSQL with pgvector extension
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: memu-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-memu_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-memu_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-memu_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-memu}
     ports:
-      - "54320:5432"
+      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-memu_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,22 +24,21 @@ services:
   # different schemas within the same PostgreSQL instance. Sharing the same
   # database can cause schema conflicts and is not recommended even for development.
   temporal:
-    image: temporalio/auto-setup:latest
-    container_name: memu-temporal
+    image: temporalio/auto-setup:1.25.1
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       - DB=postgresql
       - DB_PORT=5432
-      - POSTGRES_USER=${POSTGRES_USER:-memu_user}
-      - POSTGRES_PWD=${POSTGRES_PASSWORD:-memu_pass}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_SEEDS=postgres
-      - POSTGRES_DB=${POSTGRES_DB:-memu_db}
+      - POSTGRES_DB=${POSTGRES_DB:-memu}
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
     ports:
-      - "17233:7233"  # Temporal gRPC
-      - "18233:8233"  # Temporal Web UI
+      - "7233:7233"  # Temporal gRPC
+      - "8088:8233"  # Temporal Web UI
     networks:
       - memu-network
 
