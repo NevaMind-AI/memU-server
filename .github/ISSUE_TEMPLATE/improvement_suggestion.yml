@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for suggesting an improvement! Please fill out the form below.
-  
+
   - type: textarea
     id: current
     attributes:
@@ -16,7 +16,7 @@ body:
       placeholder: Currently, the system...
     validations:
       required: true
-  
+
   - type: textarea
     id: suggested
     attributes:
@@ -25,7 +25,7 @@ body:
       placeholder: It would be better if...
     validations:
       required: true
-  
+
   - type: textarea
     id: rationale
     attributes:
@@ -34,7 +34,7 @@ body:
       placeholder: This would improve...
     validations:
       required: true
-  
+
   - type: textarea
     id: impact
     attributes:
@@ -43,7 +43,7 @@ body:
       placeholder: This would affect...
     validations:
       required: false
-  
+
   - type: textarea
     id: implementation
     attributes:
@@ -52,7 +52,7 @@ body:
       placeholder: This could be implemented by...
     validations:
       required: false
-  
+
   - type: textarea
     id: additional
     attributes:

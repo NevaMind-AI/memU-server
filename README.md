@@ -18,7 +18,7 @@ Star memU-server to get notified about new releases and join our growing communi
 ## 🚀 Get Started
 
 ### Run from source
-1. Ensure you have Python 3.14+ and [uv](https://docs.astral.sh/uv/) installed.
+1. Ensure you have Python 3.13+ and [uv](https://docs.astral.sh/uv/) installed.
 2. Clone the repository and enter it:
    ```bash
    git clone https://github.com/NevaMind-AI/memU-server.git

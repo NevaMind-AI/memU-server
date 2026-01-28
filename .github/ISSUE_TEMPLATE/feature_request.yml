@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for suggesting a new feature! Please fill out the form below.
-  
+
   - type: textarea
     id: problem
     attributes:
@@ -16,7 +16,7 @@ body:
       placeholder: I'm always frustrated when...
     validations:
       required: true
-  
+
   - type: textarea
     id: solution
     attributes:
@@ -25,7 +25,7 @@ body:
       placeholder: I would like to have...
     validations:
       required: true
-  
+
   - type: textarea
     id: alternatives
     attributes:
@@ -34,7 +34,7 @@ body:
       placeholder: Alternative approaches could be...
     validations:
       required: false
-  
+
   - type: textarea
     id: benefits
     attributes:
@@ -43,7 +43,7 @@ body:
       placeholder: This feature would help users...
     validations:
       required: false
-  
+
   - type: textarea
     id: additional
     attributes:
