@@ -35,11 +35,11 @@ Star memU-server to get notified about new releases and join our growing communi
    ```
    The server runs on `http://127.0.0.1:8000`.
 
-### Run with Docker Compose (Local Development)
-Start the full local development environment with PostgreSQL and Temporal:
+### Run local infrastructure with Docker Compose
+Start local infrastructure dependencies (PostgreSQL and Temporal). Start the FastAPI API server separately (see "Run from source" above):
 
 ```bash
-# Start all services (PostgreSQL, Temporal, Temporal UI)
+# Start infrastructure services (PostgreSQL, Temporal, Temporal UI)
 docker compose up -d
 
 # View logs
