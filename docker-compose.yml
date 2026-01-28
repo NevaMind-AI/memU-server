@@ -34,11 +34,22 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PWD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_SEEDS=postgres
-      - POSTGRES_DB=${POSTGRES_DB:-memu}
+      - POSTGRES_DB=${TEMPORAL_DB:-temporal}
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
     ports:
       - "7233:7233"  # Temporal gRPC
-      - "8088:8233"  # Temporal Web UI
+    networks:
+      - memu-network
+
+  # Temporal Web UI
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    ports:
+      - "8088:8080"  # Temporal Web UI
     networks:
       - memu-network
 
