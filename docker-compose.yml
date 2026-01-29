@@ -1,0 +1,65 @@
+services:
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-memu}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - memu-network
+
+  # Temporal server
+  # Note: Temporal shares the same PostgreSQL instance as the main app but uses
+  # a separate database (`TEMPORAL_DB`, default: `temporal`) from the app's
+  # database (`POSTGRES_DB`, default: `memu`).
+  # TODO: For production, consider using a separate PostgreSQL instance for Temporal
+  # or at minimum keep Temporal and the app in separate databases as configured here.
+  # Pointing both services at the same database can cause schema conflicts and is
+  # not recommended.
+  temporal:
+    image: temporalio/auto-setup:1.25.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_SEEDS=postgres
+      - POSTGRES_DB=${TEMPORAL_DB:-temporal}
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"  # Temporal gRPC
+    networks:
+      - memu-network
+
+  # Temporal Web UI
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    ports:
+      - "8088:8080"  # Temporal Web UI
+    networks:
+      - memu-network
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  memu-network:
+    driver: bridge

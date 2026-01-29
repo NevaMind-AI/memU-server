@@ -18,7 +18,7 @@ Star memU-server to get notified about new releases and join our growing communi
 ## 🚀 Get Started
 
 ### Run from source
-1. Ensure you have Python 3.14+ and [uv](https://docs.astral.sh/uv/) installed.
+1. Ensure you have Python 3.13+ and [uv](https://docs.astral.sh/uv/) installed.
 2. Clone the repository and enter it:
    ```bash
    git clone https://github.com/NevaMind-AI/memU-server.git
@@ -34,6 +34,36 @@ Star memU-server to get notified about new releases and join our growing communi
    uv run fastapi dev
    ```
    The server runs on `http://127.0.0.1:8000`.
+
+### Run local infrastructure with Docker Compose
+Start local infrastructure dependencies (PostgreSQL and Temporal). Start the FastAPI API server separately (see "Run from source" above):
+
+```bash
+# Start infrastructure services (PostgreSQL, Temporal, Temporal UI)
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+**Services:**
+| Service | Port | Description |
+|---------|------|-------------|
+| PostgreSQL | 5432 | Database with pgvector extension |
+| Temporal | 7233 | Workflow engine gRPC API |
+| Temporal UI | 8088 | Web management interface |
+
+**Default Configuration:**
+- PostgreSQL DSN: `postgresql://postgres:postgres@localhost:5432/memu`
+- Temporal Database: `temporal` (separate from app database)
+
+**Environment Variables (optional `.env` file):**
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=memu
+TEMPORAL_DB=temporal
+```
 
 ### Run with Docker
 1. Export your OpenAI API key so Docker can read it:
