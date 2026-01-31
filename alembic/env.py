@@ -4,6 +4,7 @@ import os
 
 # pylint: disable=no-member
 from logging.config import fileConfig
+from urllib.parse import quote_plus
 
 from sqlalchemy import pool
 
@@ -15,8 +16,7 @@ def get_sync_database_url() -> str:
     Get synchronous database URL for Alembic migrations.
 
     Alembic uses synchronous database connections, so we need to convert
-    the async URL (postgresql+psycopg://) to sync format (postgresql+psycopg://)
-    or use a sync driver.
+    the async URL (postgresql+asyncpg://) to sync format (postgresql+psycopg://).
 
     Returns:
         str: Synchronous database connection URL
@@ -24,8 +24,10 @@ def get_sync_database_url() -> str:
     # First try DATABASE_URL from environment
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        # Convert async URL to sync if needed
-        # postgresql+psycopg:// works for both sync and async with psycopg3
+        # Convert async driver to sync driver if needed
+        # postgresql+asyncpg:// -> postgresql+psycopg://
+        if "+asyncpg" in database_url:
+            database_url = database_url.replace("+asyncpg", "+psycopg")
         return database_url
 
     # Construct from individual variables
@@ -35,8 +37,12 @@ def get_sync_database_url() -> str:
     db_pass = os.getenv("DATABASE_PASSWORD", "postgres")
     db_name = os.getenv("DATABASE_NAME", "memu")
 
+    # URL-encode username and password to handle special characters
+    db_user_encoded = quote_plus(db_user)
+    db_pass_encoded = quote_plus(db_pass)
+
     # Use psycopg (sync) for Alembic migrations
-    return f"postgresql+psycopg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+    return f"postgresql+psycopg://{db_user_encoded}:{db_pass_encoded}@{db_host}:{db_port}/{db_name}"
 
 
 # this is the Alembic Config object, which provides

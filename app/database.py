@@ -1,13 +1,10 @@
 """Database configuration and session management."""
 
-import logging
 import os
 from urllib.parse import quote_plus
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
-
-logger = logging.getLogger(__name__)
 
 
 def get_database_url() -> str:
