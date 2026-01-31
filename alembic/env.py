@@ -4,7 +4,7 @@ import os
 
 # pylint: disable=no-member
 from logging.config import fileConfig
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
 from sqlalchemy import pool
 
@@ -48,8 +48,9 @@ def get_sync_database_url() -> str:
     db_name = os.getenv("DATABASE_NAME", "memu")
 
     # URL-encode username and password to handle special characters
-    db_user_encoded = quote_plus(db_user)
-    db_pass_encoded = quote_plus(db_pass)
+    # Use quote(..., safe="") instead of quote_plus() for URL userinfo section
+    db_user_encoded = quote(db_user, safe="")
+    db_pass_encoded = quote(db_pass, safe="")
 
     # Use psycopg (sync) for Alembic migrations
     return f"postgresql+psycopg://{db_user_encoded}:{db_pass_encoded}@{db_host}:{db_port}/{db_name}"

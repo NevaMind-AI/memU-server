@@ -1,7 +1,7 @@
 """Database configuration and session management."""
 
 import os
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
@@ -29,6 +29,12 @@ def get_database_url() -> str:
         elif database_url.startswith("postgresql://") and not database_url.startswith("postgresql+"):
             # postgresql://user:pass@host/db -> postgresql+psycopg://user:pass@host/db
             database_url = "postgresql+psycopg://" + database_url[len("postgresql://") :]
+
+        # Convert asyncpg driver to psycopg if needed (asyncpg is not a project dependency)
+        # postgresql+asyncpg:// -> postgresql+psycopg://
+        if "+asyncpg" in database_url:
+            database_url = database_url.replace("+asyncpg", "+psycopg", 1)
+
         return database_url
 
     # Construct from individual variables
@@ -64,8 +70,9 @@ def get_database_url() -> str:
     assert db_name is not None
 
     # URL-encode username and password to handle special characters like '@', ':', '/'
-    db_user_encoded = quote_plus(db_user)
-    db_pass_encoded = quote_plus(db_pass)
+    # Use quote(..., safe="") instead of quote_plus() for URL userinfo section
+    db_user_encoded = quote(db_user, safe="")
+    db_pass_encoded = quote(db_pass, safe="")
 
     return f"postgresql+psycopg://{db_user_encoded}:{db_pass_encoded}@{db_host}:{db_port}/{db_name}"
 
