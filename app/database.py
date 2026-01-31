@@ -13,22 +13,22 @@ logger = logging.getLogger(__name__)
 def get_database_url() -> str:
     """
     Get database URL from environment variables.
-    
+
     Priority: DATABASE_URL > constructed from individual variables
-    
+
     Returns:
         str: Database connection URL
-        
+
     Raises:
         RuntimeError: If required environment variables are missing
     """
     database_url = os.getenv("DATABASE_URL")
     if database_url:
         return database_url
-    
+
     # Construct from individual variables
     db_host = os.getenv("DATABASE_HOST")
-    db_port = os.getenv("DATABASE_PORT", "54320")  # Default PostgreSQL port
+    db_port = os.getenv("DATABASE_PORT", "5432")  # Default PostgreSQL port
     db_user = os.getenv("DATABASE_USER")
     db_pass = os.getenv("DATABASE_PASSWORD")
     db_name = os.getenv("DATABASE_NAME")
@@ -51,10 +51,17 @@ def get_database_url() -> str:
             f"Database configuration is incomplete. Missing environment variables: {', '.join(missing_vars)}"
         )
 
+    # At this point, we know db_user, db_pass, db_host, db_name are not None
+    # Use assertion to help mypy understand this
+    assert db_user is not None
+    assert db_pass is not None
+    assert db_host is not None
+    assert db_name is not None
+
     # URL-encode username and password to handle special characters like '@', ':', '/'
     db_user_encoded = quote_plus(db_user)
     db_pass_encoded = quote_plus(db_pass)
-    
+
     return f"postgresql+psycopg://{db_user_encoded}:{db_pass_encoded}@{db_host}:{db_port}/{db_name}"
 
 

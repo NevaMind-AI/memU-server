@@ -1,11 +1,43 @@
 """Alembic migration environment configuration."""
 
+import os
+
 # pylint: disable=no-member
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import pool
 
 from alembic import context
+
+
+def get_sync_database_url() -> str:
+    """
+    Get synchronous database URL for Alembic migrations.
+
+    Alembic uses synchronous database connections, so we need to convert
+    the async URL (postgresql+psycopg://) to sync format (postgresql+psycopg://)
+    or use a sync driver.
+
+    Returns:
+        str: Synchronous database connection URL
+    """
+    # First try DATABASE_URL from environment
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        # Convert async URL to sync if needed
+        # postgresql+psycopg:// works for both sync and async with psycopg3
+        return database_url
+
+    # Construct from individual variables
+    db_host = os.getenv("DATABASE_HOST", "localhost")
+    db_port = os.getenv("DATABASE_PORT", "5432")
+    db_user = os.getenv("DATABASE_USER", "postgres")
+    db_pass = os.getenv("DATABASE_PASSWORD", "postgres")
+    db_name = os.getenv("DATABASE_NAME", "memu")
+
+    # Use psycopg (sync) for Alembic migrations
+    return f"postgresql+psycopg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -47,10 +79,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    # TODO: Update to read DATABASE_URL from environment variable or app.database.get_database_url()
-    # Current implementation expects sqlalchemy.url in alembic.ini which doesn't support
-    # environment variables. Consider adding: url = os.getenv('DATABASE_URL') or config.get_main_option(...)
-    url = config.get_main_option("sqlalchemy.url")
+    # Get URL from environment variables
+    url = get_sync_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -69,11 +99,11 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    from sqlalchemy import create_engine
+
+    # Get URL from environment variables and create engine directly
+    url = get_sync_database_url()
+    connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
