@@ -10,6 +10,11 @@ from sqlalchemy import pool
 
 from alembic import context
 
+# Import Base metadata for autogenerate support
+# Note: We import from app.models.base which is side-effect free
+# (doesn't create database connections or read environment variables)
+from app.models.base import Base
+
 
 def get_sync_database_url() -> str:
     """
@@ -65,18 +70,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# Note: Import models in env.py only when needed to avoid side effects
-#
-# TODO: Import your SQLAlchemy Base metadata here for autogenerate support.
-# Since this PR adds database.py with a Base class, you should import it:
-#
-#   from app.database import Base
-#   target_metadata = Base.metadata
-#
-# Without this, Alembic cannot auto-generate migrations from your models.
-target_metadata = None
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
