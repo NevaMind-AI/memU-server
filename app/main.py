@@ -37,7 +37,8 @@ service = MemoryService(
 )
 
 # Storage directory for conversation files
-storage_dir = Path(os.getenv("STORAGE_PATH", "./data"))
+# Support both new STORAGE_PATH and legacy MEMU_STORAGE_DIR for backward compatibility
+storage_dir = Path(os.getenv("STORAGE_PATH") or os.getenv("MEMU_STORAGE_DIR") or "./data")
 storage_dir.mkdir(parents=True, exist_ok=True)
 
 

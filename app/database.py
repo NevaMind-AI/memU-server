@@ -21,6 +21,14 @@ def get_database_url() -> str:
     """
     database_url = os.getenv("DATABASE_URL")
     if database_url:
+        # Normalize common PostgreSQL DSNs to use the psycopg async driver.
+        # Handle bare postgres:// and postgresql:// URLs that don't specify a driver.
+        if database_url.startswith("postgres://"):
+            # postgres://user:pass@host/db -> postgresql+psycopg://user:pass@host/db
+            database_url = "postgresql+psycopg://" + database_url[len("postgres://") :]
+        elif database_url.startswith("postgresql://") and not database_url.startswith("postgresql+"):
+            # postgresql://user:pass@host/db -> postgresql+psycopg://user:pass@host/db
+            database_url = "postgresql+psycopg://" + database_url[len("postgresql://") :]
         return database_url
 
     # Construct from individual variables
