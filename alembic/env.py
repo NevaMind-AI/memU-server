@@ -46,11 +46,34 @@ def get_sync_database_url() -> str:
         return database_url
 
     # Construct from individual variables
-    db_host = os.getenv("DATABASE_HOST", "localhost")
-    db_port = os.getenv("DATABASE_PORT", "5432")
-    db_user = os.getenv("DATABASE_USER", "postgres")
-    db_pass = os.getenv("DATABASE_PASSWORD", "postgres")
-    db_name = os.getenv("DATABASE_NAME", "memu")
+    db_host = os.getenv("DATABASE_HOST")
+    db_port = os.getenv("DATABASE_PORT", "5432")  # Default PostgreSQL port
+    db_user = os.getenv("DATABASE_USER")
+    db_pass = os.getenv("DATABASE_PASSWORD")
+    db_name = os.getenv("DATABASE_NAME")
+
+    # Validate required environment variables (consistent with app/database.py)
+    missing_vars = [
+        name
+        for name, value in [
+            ("DATABASE_HOST", db_host),
+            ("DATABASE_USER", db_user),
+            ("DATABASE_PASSWORD", db_pass),
+            ("DATABASE_NAME", db_name),
+        ]
+        if not value
+    ]
+
+    if missing_vars:
+        raise RuntimeError(
+            f"Database configuration is incomplete. Missing environment variables: {', '.join(missing_vars)}"
+        )
+
+    # At this point, we know these are not None
+    assert db_host is not None
+    assert db_user is not None
+    assert db_pass is not None
+    assert db_name is not None
 
     # URL-encode username and password to handle special characters
     # Use quote(..., safe="") instead of quote_plus() for URL userinfo section
