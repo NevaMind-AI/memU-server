@@ -91,8 +91,8 @@ engine = create_async_engine(
     max_overflow=20,
 )
 # Async session factory
+# Note: autocommit is removed as it's not supported in SQLAlchemy 2.x async_sessionmaker
 SessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
-    autocommit=False,
     autoflush=False,
     expire_on_commit=False,
     bind=engine,
