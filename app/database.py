@@ -33,8 +33,8 @@ def get_database_url() -> str:
 
         # Convert asyncpg driver to psycopg if needed (asyncpg is not a project dependency)
         # postgresql+asyncpg:// -> postgresql+psycopg://
-        if "+asyncpg" in database_url:
-            database_url = database_url.replace("+asyncpg", "+psycopg", 1)
+        if database_url.startswith("postgresql+asyncpg://"):
+            database_url = "postgresql+psycopg://" + database_url[len("postgresql+asyncpg://") :]
 
         return database_url
 

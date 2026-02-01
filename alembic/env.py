@@ -40,8 +40,8 @@ def get_sync_database_url() -> str:
 
         # Convert async driver to sync driver if needed
         # postgresql+asyncpg:// -> postgresql+psycopg://
-        if "+asyncpg" in database_url:
-            database_url = database_url.replace("+asyncpg", "+psycopg", 1)
+        if database_url.startswith("postgresql+asyncpg://"):
+            database_url = "postgresql+psycopg://" + database_url[len("postgresql+asyncpg://") :]
 
         return database_url
 
