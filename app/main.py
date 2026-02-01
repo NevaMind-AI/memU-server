@@ -9,10 +9,36 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from memu.app import MemoryService
 
-app = FastAPI()
-service = MemoryService(llm_config={"api_key": os.getenv("OPENAI_API_KEY")})
+from app.database import get_database_url
 
-storage_dir = Path(os.getenv("MEMU_STORAGE_DIR", "./data"))
+app = FastAPI(title="memU Server", version="0.1.0")
+
+# Ensure required environment variables are set
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
+    raise RuntimeError(
+        "OPENAI_API_KEY environment variable is not set or is empty. "
+        "Set OPENAI_API_KEY to a valid OpenAI API key before starting the server."
+    )
+
+# Get database URL using shared configuration utility
+database_url = get_database_url()
+
+service = MemoryService(
+    llm_profiles={
+        "default": {
+            "provider": "openai",
+            "api_key": openai_api_key,
+            "base_url": os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            "model": os.getenv("DEFAULT_LLM_MODEL", "gpt-4o-mini"),
+        }
+    },
+    database_config={"url": database_url},
+)
+
+# Storage directory for conversation files
+# Support both new STORAGE_PATH and legacy MEMU_STORAGE_DIR for backward compatibility
+storage_dir = Path(os.getenv("STORAGE_PATH") or os.getenv("MEMU_STORAGE_DIR") or "./data")
 storage_dir.mkdir(parents=True, exist_ok=True)
 
 

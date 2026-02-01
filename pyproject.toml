@@ -121,6 +121,9 @@ DEP002 = [
     "python-dotenv",     # Environment variables (future use)
     "pendulum",          # Date/time handling (future use)
 ]
+DEP003 = [
+    "app",               # Project's own package, not an external dependency
+]
 
 [tool.mypy]
 python_version = "3.13"
