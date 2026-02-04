@@ -6,6 +6,10 @@ This approach avoids issues with shared module state and ensures clean test isol
 
 import subprocess
 import sys
+from pathlib import Path
+
+# Project root directory (parent of tests/)
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = None) -> subprocess.CompletedProcess:
@@ -38,7 +42,8 @@ def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = N
         env=env,
         capture_output=True,
         text=True,
-        cwd=str(__file__).rsplit("/tests/", 1)[0],  # Project root
+        cwd=str(PROJECT_ROOT),
+        timeout=30,  # Prevent tests from hanging indefinitely
     )
     return result
 
