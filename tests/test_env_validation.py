@@ -1,110 +1,113 @@
-"""Test environment variable validation."""
+"""Test environment variable validation using subprocess isolation.
 
+This module uses subprocess isolation to test module-level initialization errors.
+This approach avoids issues with shared module state and ensures clean test isolation.
+"""
+
+import subprocess
 import sys
 
-import pytest
+
+def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = None) -> subprocess.CompletedProcess:
+    """
+    Run a subprocess that attempts to import app.main with specified environment.
+
+    Args:
+        env_vars: Environment variables to set
+        remove_vars: Environment variables to remove (if any)
+
+    Returns:
+        CompletedProcess with returncode, stdout, and stderr
+    """
+    import os
+
+    # Start with a clean environment based on current env
+    env = os.environ.copy()
+
+    # Remove specified variables
+    if remove_vars:
+        for var in remove_vars:
+            env.pop(var, None)
+
+    # Set specified variables
+    env.update(env_vars)
+
+    # Run Python subprocess that imports app.main
+    result = subprocess.run(
+        [sys.executable, "-c", "from app.main import app; print(app.title)"],
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=str(__file__).rsplit("/tests/", 1)[0],  # Project root
+    )
+    return result
 
 
-def test_app_requires_openai_api_key(monkeypatch):
+def test_app_requires_openai_api_key():
     """Test that app refuses to start when OPENAI_API_KEY is not set."""
-    # Remove the environment variable
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    result = _run_import_test(
+        env_vars={
+            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
+        },
+        remove_vars=["OPENAI_API_KEY"],
+    )
 
-    # Remove app.main from sys.modules to force reimport
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
-
-    # Importing app should raise RuntimeError
-    with pytest.raises(RuntimeError, match="OPENAI_API_KEY environment variable is not set or is empty"):
-        from app.main import app  # noqa: F401
-
-    # Clean up
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
+    assert result.returncode != 0
+    assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
 
 
-def test_app_refuses_empty_openai_api_key(monkeypatch):
+def test_app_refuses_empty_openai_api_key():
     """Test that app refuses to start when OPENAI_API_KEY is empty."""
-    # Set to empty string
-    monkeypatch.setenv("OPENAI_API_KEY", "")
+    result = _run_import_test(
+        env_vars={
+            "OPENAI_API_KEY": "",
+            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
+        },
+    )
 
-    # Remove app.main from sys.modules to force reimport
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
-
-    # Importing app should raise RuntimeError
-    with pytest.raises(RuntimeError, match="OPENAI_API_KEY environment variable is not set or is empty"):
-        from app.main import app  # noqa: F401
-
-    # Clean up
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
+    assert result.returncode != 0
+    assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
 
 
-def test_app_requires_database_url(monkeypatch):
+def test_app_requires_database_url():
     """Test that app refuses to start when DATABASE_URL is not set."""
-    # Set valid API key but no DATABASE_URL
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.delenv("DATABASE_URL", raising=False)
-    # Also remove individual DB vars
-    for var in ["DATABASE_HOST", "DATABASE_USER", "DATABASE_PASSWORD", "DATABASE_NAME"]:
-        monkeypatch.delenv(var, raising=False)
+    result = _run_import_test(
+        env_vars={
+            "OPENAI_API_KEY": "test-key",
+        },
+        remove_vars=["DATABASE_URL", "DATABASE_HOST", "DATABASE_USER", "DATABASE_PASSWORD", "DATABASE_NAME"],
+    )
 
-    # Remove app.main from sys.modules to force reimport
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
-
-    # Importing app should raise RuntimeError
-    with pytest.raises(RuntimeError, match="Database configuration is incomplete"):
-        from app.main import app  # noqa: F401
-
-    # Clean up
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
+    assert result.returncode != 0
+    assert "Database configuration is incomplete" in result.stderr
 
 
-def test_app_with_individual_db_vars(monkeypatch):
+def test_app_with_individual_db_vars():
     """Test that app starts with individual DATABASE_* variables."""
-    # Set valid API key and individual DB variables
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.delenv("DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_HOST", "localhost")
-    monkeypatch.setenv("DATABASE_PORT", "54320")
-    monkeypatch.setenv("DATABASE_USER", "test_user")
-    monkeypatch.setenv("DATABASE_PASSWORD", "test_pass")
-    monkeypatch.setenv("DATABASE_NAME", "test_db")
+    result = _run_import_test(
+        env_vars={
+            "OPENAI_API_KEY": "test-key",
+            "DATABASE_HOST": "localhost",
+            "DATABASE_PORT": "54320",
+            "DATABASE_USER": "test_user",
+            "DATABASE_PASSWORD": "test_pass",
+            "DATABASE_NAME": "test_db",
+        },
+        remove_vars=["DATABASE_URL"],
+    )
 
-    # Remove app.main from sys.modules to force reimport
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
-
-    # Should not raise
-    from app.main import app
-
-    assert app is not None
-    assert app.title == "memU Server"
-
-    # Clean up
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
+    assert result.returncode == 0
+    assert "memU Server" in result.stdout
 
 
-def test_app_starts_with_valid_openai_api_key(monkeypatch):
+def test_app_starts_with_valid_openai_api_key():
     """Test that app starts successfully with valid OPENAI_API_KEY."""
-    # Set valid key and database URL
-    monkeypatch.setenv("OPENAI_API_KEY", "test-valid-key")
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://test:test@localhost:5432/test")
+    result = _run_import_test(
+        env_vars={
+            "OPENAI_API_KEY": "test-valid-key",
+            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
+        },
+    )
 
-    # Remove app.main from sys.modules to force reimport
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
-
-    # Should not raise
-    from app.main import app
-
-    assert app is not None
-    assert app.title == "memU Server"
-
-    # Clean up
-    if "app.main" in sys.modules:
-        del sys.modules["app.main"]
+    assert result.returncode == 0
+    assert "memU Server" in result.stdout
