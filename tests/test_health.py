@@ -1,4 +1,4 @@
-"""Basic health check tests."""
+"""Tests for the application's root ("/") endpoint."""
 
 import pytest
 from fastapi.testclient import TestClient

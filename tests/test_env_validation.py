@@ -55,7 +55,7 @@ def test_app_requires_database_url(monkeypatch):
         del sys.modules["app.main"]
 
     # Importing app should raise RuntimeError
-    with pytest.raises(RuntimeError, match="Database configuration is not set correctly"):
+    with pytest.raises(RuntimeError, match="Database configuration is incomplete"):
         from app.main import app  # noqa: F401
 
     # Clean up
