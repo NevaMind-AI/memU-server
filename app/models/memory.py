@@ -5,7 +5,7 @@ from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Column, Field, SQLModel, Text
+from sqlmodel import Column, DateTime, Field, SQLModel, Text
 
 from .base import BaseModel
 
@@ -22,7 +22,11 @@ class MemoryBase(SQLModel):
         default=None, sa_column=Column(Vector(1536)), description="Memory embedding vector (1536 dimensions)"
     )
     links: list[Any] | None = Field(default=None, sa_column=Column(JSONB), description="Related links or references")
-    happened_at: datetime | None = Field(default=None, description="When the memory event occurred")
+    happened_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),
+        description="When the memory event occurred",  # type: ignore[call-overload]
+    )
 
 
 class Memory(BaseModel, MemoryBase, table=True):

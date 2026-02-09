@@ -15,7 +15,6 @@ class BaseModel(SQLModel):
     id: str = Field(
         default_factory=lambda: str(ksuid()),
         primary_key=True,
-        index=True,
         description="Primary key using KSUID",
     )
     created_at: datetime = Field(

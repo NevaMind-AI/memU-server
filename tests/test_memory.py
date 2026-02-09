@@ -126,6 +126,6 @@ def test_memory_indexes():
     assert model_fields["memory_id"].index is True
     assert model_fields["category"].index is True
 
-    # Also verify the primary key index on id (inherited from BaseModel)
+    # Also verify the primary key on id (inherited from BaseModel)
+    # Note: primary_key already implies indexing in PostgreSQL, no separate index needed
     assert model_fields["id"].primary_key is True
-    assert model_fields["id"].index is True
