@@ -9,6 +9,8 @@ from sqlmodel import Column, DateTime, Field, SQLModel, Text
 
 from .base import BaseModel
 
+EMBEDDING_DIM = 1536
+
 
 class MemoryBase(SQLModel):
     """Base schema for Memory model."""
@@ -19,13 +21,13 @@ class MemoryBase(SQLModel):
     category: str | None = Field(default=None, index=True, description="Memory category name")
     content: str = Field(sa_column=Column(Text, nullable=False), description="Memory content text")
     embedding: list[float] | None = Field(
-        default=None, sa_column=Column(Vector(1536)), description="Memory embedding vector (1536 dimensions)"
+        default=None, sa_column=Column(Vector(EMBEDDING_DIM)), description="Memory embedding vector"
     )
     links: list[Any] | None = Field(default=None, sa_column=Column(JSONB), description="Related links or references")
     happened_at: datetime | None = Field(
         default=None,
-        sa_type=DateTime(timezone=True),
-        description="When the memory event occurred",  # type: ignore[call-overload]
+        sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
+        description="When the memory event occurred",
     )
 
 

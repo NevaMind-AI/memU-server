@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 from app.models import Memory, MemoryCreate, MemoryUpdate
+from app.models.memory import EMBEDDING_DIM
 
 
 def test_memory_model_creation_with_all_fields():
@@ -13,7 +14,7 @@ def test_memory_model_creation_with_all_fields():
         memory_id="mem123",
         category="profile",
         content="User likes Python programming",
-        embedding=[0.1] * 1536,
+        embedding=[0.1] * EMBEDDING_DIM,
         links=["https://example.com"],
         happened_at=datetime.now(UTC),
     )
@@ -23,7 +24,7 @@ def test_memory_model_creation_with_all_fields():
     assert memory.memory_id == "mem123"
     assert memory.category == "profile"
     assert memory.content == "User likes Python programming"
-    assert len(memory.embedding) == 1536
+    assert len(memory.embedding) == EMBEDDING_DIM
     assert memory.links == ["https://example.com"]
     assert memory.happened_at is not None
     # BaseModel fields
@@ -51,18 +52,18 @@ def test_memory_model_with_minimal_fields():
 
 
 def test_memory_embedding_dimension():
-    """Test that embedding accepts 1536-dimensional vectors."""
-    embedding_1536 = [0.5] * 1536
+    """Test that embedding accepts correct dimensional vectors."""
+    embedding = [0.5] * EMBEDDING_DIM
 
     memory = Memory(
         user_id="user123",
         memory_id="mem123",
         content="Test content",
-        embedding=embedding_1536,
+        embedding=embedding,
     )
 
     assert memory.embedding is not None
-    assert len(memory.embedding) == 1536
+    assert len(memory.embedding) == EMBEDDING_DIM
 
 
 def test_memory_links_as_json():
