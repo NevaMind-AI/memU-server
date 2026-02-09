@@ -744,6 +744,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
+    { name = "svix-ksuid" },
     { name = "temporalio" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -775,6 +776,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.41" },
     { name = "sqlmodel", specifier = ">=0.0.27" },
+    { name = "svix-ksuid", specifier = ">=0.6.2" },
     { name = "temporalio", specifier = "==1.16.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.35.0" },
 ]
@@ -1251,6 +1253,12 @@ wheels = [
 ]
 
 [[package]]
+name = "python-baseconv"
+version = "1.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/d0/9297d7d8dd74767b4d5560d834b30b2fff17d39987c23ed8656f476e0d9b/python-baseconv-1.2.2.tar.gz", hash = "sha256:0539f8bd0464013b05ad62e0a1673f0ac9086c76b43ebf9f833053527cd9931b", size = 4929, upload-time = "2019-04-04T19:28:57.17Z" }
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1547,6 +1555,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/96/5b/496f8abebd10c3301
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/40/8561ce06dc46fd17242c7724ab25b257a2ac1b35f4ebf551b40ce6105cfa/stevedore-5.6.0-py3-none-any.whl", hash = "sha256:4a36dccefd7aeea0c70135526cecb7766c4c84c473b1af68db23d541b6dc1820", size = 54428, upload-time = "2025-11-20T10:06:05.946Z" },
 ]
+
+[[package]]
+name = "svix-ksuid"
+version = "0.6.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-baseconv" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a1/7a/0c98b77ca01d64f13143607b88273a13110d659780b93cb1333abebf8039/svix-ksuid-0.6.2.tar.gz", hash = "sha256:beb95bd6284bdbd526834e233846653d2bd26eb162b3233513d8f2c853c78964", size = 6957, upload-time = "2023-07-07T09:18:24.717Z" }
 
 [[package]]
 name = "temporalio"

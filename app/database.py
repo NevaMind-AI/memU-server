@@ -4,8 +4,7 @@ import os
 from urllib.parse import quote
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from app.models.base import Base
+from sqlmodel import SQLModel
 
 
 def get_database_url() -> str:
@@ -97,8 +96,8 @@ SessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
     expire_on_commit=False,
     bind=engine,
 )
-# Re-export Base for backward compatibility
-__all__ = ["Base", "SessionLocal", "engine", "get_db", "get_database_url"]
+# Re-export SQLModel for backward compatibility
+__all__ = ["SQLModel", "SessionLocal", "engine", "get_db", "get_database_url"]
 
 
 async def get_db():

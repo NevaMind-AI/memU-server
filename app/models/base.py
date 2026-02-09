@@ -1,14 +1,30 @@
-"""SQLAlchemy Base class for model definitions.
+"""Base model mixin for all database models."""
 
-This module is intentionally side-effect-free - it only defines the Base class
-without creating any database connections or reading environment variables.
-This allows safe imports from alembic/env.py for migration autogeneration.
-"""
+from datetime import UTC, datetime
 
-from sqlalchemy.orm import DeclarativeBase
+from sqlmodel import DateTime, Field, SQLModel
+from svix_ksuid import ksuid
 
 
-class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy models."""
+class BaseModel(SQLModel):
+    """Base model with common fields for all tables.
 
-    pass
+    Provides auto-generated id and timestamps for all database models.
+    """
+
+    id: str = Field(
+        default_factory=lambda: str(ksuid()),
+        primary_key=True,
+        index=True,
+        description="Primary key using KSUID",
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
+        description="Creation timestamp",
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
+        description="Last update timestamp",
+    )
