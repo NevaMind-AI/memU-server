@@ -117,15 +117,15 @@ def test_memory_tablename():
 
 def test_memory_indexes():
     """Test that Memory has proper indexes on key fields."""
-    # user_id, agent_id, memory_id, category should be indexed
-    memory = Memory(
-        user_id="user123",
-        memory_id="mem123",
-        content="Test",
-    )
+    # Verify that the indexed fields have index=True in their Field configuration
+    model_fields = Memory.model_fields
 
-    # Verify fields exist
-    assert hasattr(memory, "user_id")
-    assert hasattr(memory, "agent_id")
-    assert hasattr(memory, "memory_id")
-    assert hasattr(memory, "category")
+    # Check that these fields are marked as indexed
+    assert model_fields["user_id"].index is True
+    assert model_fields["agent_id"].index is True
+    assert model_fields["memory_id"].index is True
+    assert model_fields["category"].index is True
+
+    # Also verify the primary key index on id (inherited from BaseModel)
+    assert model_fields["id"].primary_key is True
+    assert model_fields["id"].index is True
