@@ -64,7 +64,7 @@ def test_base_model_id_is_ksuid_format():
 
     model = TestModel(name="test")
 
-    # KSUID should be 27 characters
-    assert len(model.id) == 27
+    # KSUID should be 40 characters (hex string)
+    assert len(model.id) == 40
     # KSUID should be alphanumeric
     assert model.id.replace("_", "").replace("-", "").isalnum()

@@ -1,6 +1,7 @@
 """Memory models for storing and retrieving memories."""
 
 from datetime import datetime
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects.postgresql import JSONB
@@ -20,7 +21,7 @@ class MemoryBase(SQLModel):
     embedding: list[float] | None = Field(
         default=None, sa_column=Column(Vector(1536)), description="Memory embedding vector (1536 dimensions)"
     )
-    links: list | None = Field(default=None, sa_column=Column(JSONB), description="Related links or references")
+    links: list[Any] | None = Field(default=None, sa_column=Column(JSONB), description="Related links or references")
     happened_at: datetime | None = Field(default=None, description="When the memory event occurred")
 
 
