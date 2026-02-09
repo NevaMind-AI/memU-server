@@ -17,7 +17,7 @@ class MemoryBase(SQLModel):
     agent_id: str | None = Field(default=None, index=True, description="Agent ID if applicable")
     memory_id: str = Field(index=True, description="External memory ID from memu-py")
     category: str | None = Field(default=None, index=True, description="Memory category name")
-    content: str = Field(sa_column=Column(Text), description="Memory content text")
+    content: str = Field(sa_column=Column(Text, nullable=False), description="Memory content text")
     embedding: list[float] | None = Field(
         default=None, sa_column=Column(Vector(1536)), description="Memory embedding vector (1536 dimensions)"
     )
@@ -53,6 +53,6 @@ class MemoryUpdate(SQLModel):
 
     content: str | None = None
     category: str | None = None
-    links: list | None = None
+    links: list[Any] | None = None
     embedding: list[float] | None = None
     happened_at: datetime | None = None

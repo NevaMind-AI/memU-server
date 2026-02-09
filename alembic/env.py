@@ -8,6 +8,8 @@ from urllib.parse import quote
 
 from sqlalchemy import pool
 
+# Import all model modules so their tables are registered in Base.metadata
+import app.models  # noqa: F401
 from alembic import context
 
 # Import Base metadata for autogenerate support
