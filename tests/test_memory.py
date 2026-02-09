@@ -66,7 +66,7 @@ def test_memory_embedding_dimension():
 
 
 def test_memory_links_as_json():
-    """Test that links field accepts list/dict data."""
+    """Test that links field accepts JSON array data."""
     links = [
         "https://example.com",
         {"url": "https://test.com", "title": "Test"},
