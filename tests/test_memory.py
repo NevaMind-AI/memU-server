@@ -118,15 +118,16 @@ def test_memory_tablename():
 
 def test_memory_indexes():
     """Test that Memory has proper indexes on key fields."""
-    # Verify that the indexed fields have index=True in their Field configuration
-    model_fields = Memory.model_fields
+    # Verify that the SQLAlchemy columns are configured with indexes
+    table = Memory.__table__
+    columns = table.c
 
-    # Check that these fields are marked as indexed
-    assert model_fields["user_id"].index is True
-    assert model_fields["agent_id"].index is True
-    assert model_fields["memory_id"].index is True
-    assert model_fields["category"].index is True
+    # Check that these columns are marked as indexed in the table schema
+    assert columns.user_id.index is True
+    assert columns.agent_id.index is True
+    assert columns.memory_id.index is True
+    assert columns.category.index is True
 
     # Also verify the primary key on id (inherited from BaseModel)
     # Note: primary_key already implies indexing in PostgreSQL, no separate index needed
-    assert model_fields["id"].primary_key is True
+    assert columns.id.primary_key is True
