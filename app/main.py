@@ -14,10 +14,8 @@ from fastapi.responses import JSONResponse
 from app.services.memu import create_memory_service
 from config.settings import Settings
 
-# Load validated settings from environment / .env
-# OPENAI_API_KEY and EMBEDDING_API_KEY are required fields in Settings;
-# pydantic-settings raises ValidationError if they are missing entirely.
-settings = Settings()  # type: ignore[call-arg]  # populated from env vars
+# Load settings from environment / .env
+settings = Settings()
 
 if not settings.OPENAI_API_KEY.strip():
     # EM101/EM102: extract message to variable to satisfy ruff errmsg rules

@@ -50,9 +50,8 @@ def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = N
 def test_app_requires_openai_api_key(tmp_path):
     """Test that app refuses to start when OPENAI_API_KEY is empty.
 
-    OPENAI_API_KEY is a required field in Settings and further validated
-    at startup to be non-empty.  Setting it to an empty string triggers
-    the RuntimeError guard in main.py.
+    OPENAI_API_KEY defaults to empty string in Settings and is validated
+    at startup to be non-empty via a RuntimeError guard in main.py.
     """
     result = _run_import_test(
         env_vars={
