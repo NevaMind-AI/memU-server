@@ -49,9 +49,9 @@ check:
 	@echo "🚀 Running pre-commit checks"
 	@uv run pre-commit run -a
 	@echo "🚀 Running static type checks (mypy)"
-	@uv run mypy app
+	@uv run mypy app config
 	@echo "🚀 Checking for obsolete dependencies (deptry)"
-	@uv run deptry app
+	@uv run deptry app config
 
 test:
 	@echo "🚀 Running tests with coverage"

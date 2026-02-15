@@ -107,16 +107,17 @@ DEP002 = [
     "psycopg",           # PostgreSQL adapter (used in connection URLs)
     "temporalio",        # Planned for workflow orchestration
     "python-dotenv",     # Environment variables (loaded by pydantic-settings)
-    "pydantic-settings", # Used by config/settings.py (deptry only scans app/)
 ]
 DEP003 = [
     "app",               # Project's own package, not an external dependency
     "config",            # Project's own config package
+    "pydantic",          # Re-exported by pydantic-settings
+    "pydantic_core",     # Re-exported by pydantic-settings
 ]
 
 [tool.mypy]
 python_version = "3.13"
-files = ["app"]
+files = ["app", "config"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Gradually enable
