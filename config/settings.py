@@ -25,13 +25,13 @@ class Settings(BaseSettings):
     # Empty defaults: validated at application startup (app/main.py) with a
     # clear RuntimeError.  Keeping defaults allows Settings() to be constructed
     # for config-building and testing without requiring a live API key.
-    OPENAI_API_KEY: str = ""
+    OPENAI_API_KEY: str
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     DEFAULT_LLM_MODEL: str = "gpt-4o-mini"
 
     # ── Embedding ──
     # Falls back to OPENAI_API_KEY in build_memu_llm_profiles when empty
-    EMBEDDING_API_KEY: str = ""
+    EMBEDDING_API_KEY: str
     EMBEDDING_BASE_URL: str = "https://api.voyageai.com/v1"
     EMBEDDING_MODEL: str = "voyage-3.5-lite"
 

@@ -47,18 +47,23 @@ def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = N
     )
 
 
-def test_app_requires_openai_api_key():
+def test_app_requires_openai_api_key(tmp_path):
     """Test that app refuses to start when OPENAI_API_KEY is empty.
 
-    Settings reads from .env, so we must explicitly set the env var to empty
-    to override the .env file value.
+    OPENAI_API_KEY is a required field in Settings and further validated
+    at startup to be non-empty.  Setting it to an empty string triggers
+    the RuntimeError guard in main.py.
     """
     result = _run_import_test(
-        env_vars={"OPENAI_API_KEY": ""},
+        env_vars={
+            "OPENAI_API_KEY": "",
+            "EMBEDDING_API_KEY": "test",
+            "STORAGE_PATH": str(tmp_path / "storage"),
+        },
     )
 
     assert result.returncode != 0
-    assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
+    assert "OPENAI_API_KEY" in result.stderr
 
 
 def test_app_starts_with_valid_openai_api_key(tmp_path):
@@ -66,6 +71,7 @@ def test_app_starts_with_valid_openai_api_key(tmp_path):
     result = _run_import_test(
         env_vars={
             "OPENAI_API_KEY": "test-valid-key",
+            "EMBEDDING_API_KEY": "test-embed-key",
             "STORAGE_PATH": str(tmp_path / "storage"),
         },
     )

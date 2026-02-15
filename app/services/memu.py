@@ -24,7 +24,7 @@ def create_memory_service(
         Configured MemoryService instance.
     """
     if settings is None:
-        settings = Settings()
+        settings = Settings()  # type: ignore[call-arg]  # populated from env vars
 
     memu_config = build_memu_config(settings)
 
