@@ -32,7 +32,13 @@ storage_dir.mkdir(parents=True, exist_ok=True)
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Initialise MemoryService on startup (defers DB connection until the app runs)."""
-    _app.state.service = create_memory_service(settings)
+    try:
+        _app.state.service = create_memory_service(settings)
+    except Exception as exc:
+        # Log full traceback for operators and wrap in a clearer startup error
+        traceback.print_exc()
+        msg = "Failed to initialize MemoryService during application startup"
+        raise RuntimeError(msg) from exc
     yield
 
 

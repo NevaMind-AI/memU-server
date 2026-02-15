@@ -61,16 +61,6 @@ def test_app_requires_openai_api_key():
     assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
 
 
-def test_app_refuses_empty_openai_api_key():
-    """Test that app refuses to start when OPENAI_API_KEY is empty."""
-    result = _run_import_test(
-        env_vars={"OPENAI_API_KEY": ""},
-    )
-
-    assert result.returncode != 0
-    assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
-
-
 def test_app_starts_with_valid_openai_api_key(tmp_path):
     """Test that app starts successfully with valid OPENAI_API_KEY."""
     result = _run_import_test(

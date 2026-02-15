@@ -1,5 +1,7 @@
 """MemU service factory for creating MemoryService instances."""
 
+from typing import Any
+
 from memu.app import MemoryService
 
 from config.memu import build_memu_config
@@ -8,8 +10,8 @@ from config.settings import Settings
 
 def create_memory_service(
     settings: Settings | None = None,
-    memorize_config: dict | None = None,
-    retrieve_config: dict | None = None,
+    memorize_config: dict[str, Any] | None = None,
+    retrieve_config: dict[str, Any] | None = None,
 ) -> MemoryService:
     """Create a configured MemoryService instance.
 

@@ -89,3 +89,22 @@ def test_memu_config_database_url_override():
 
     dsn = config["database_config"]["metadata_store"]["dsn"]
     assert dsn == explicit_url
+
+
+def test_memu_config_database_url_password_encoding(monkeypatch):
+    """Test that assembled DATABASE_URL properly encodes special characters in password."""
+    monkeypatch.setenv("POSTGRES_USER", "testuser")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "p@ss:word")
+    monkeypatch.setenv("POSTGRES_DB", "testdb")
+    # Clear DATABASE_URL so the validator assembles from POSTGRES_* components
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    settings = Settings(DATABASE_URL="")
+    config = build_memu_config(settings)
+
+    dsn = config["database_config"]["metadata_store"]["dsn"]
+    # The raw password with special characters should not appear in the DSN
+    assert "p@ss:word" not in dsn
+    # URL-encoded representations of '@' and ':' should be present
+    assert "%40" in dsn
+    assert "%3A" in dsn

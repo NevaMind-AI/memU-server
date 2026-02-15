@@ -1,5 +1,7 @@
 """Application settings for memu-server."""
 
+from urllib.parse import quote
+
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,8 +45,10 @@ class Settings(BaseSettings):
         """Build DATABASE_URL from POSTGRES_* components when not explicitly set."""
         if v.strip():
             return v
+        user = quote(info.data["POSTGRES_USER"], safe="")
+        password = quote(info.data["POSTGRES_PASSWORD"], safe="")
         return (
-            f"postgresql+psycopg://{info.data['POSTGRES_USER']}:{info.data['POSTGRES_PASSWORD']}"
+            f"postgresql+psycopg://{user}:{password}"
             f"@{info.data['POSTGRES_HOST']}:{info.data['POSTGRES_PORT']}/{info.data['POSTGRES_DB']}"
         )
 
