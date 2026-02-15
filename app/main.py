@@ -18,6 +18,7 @@ from config.settings import Settings
 settings = Settings()
 
 if not settings.OPENAI_API_KEY.strip():
+    # EM101/EM102: extract message to variable to satisfy ruff errmsg rules
     msg = (
         "OPENAI_API_KEY environment variable is not set or is empty. "
         "Set OPENAI_API_KEY to a valid OpenAI API key before starting the server."

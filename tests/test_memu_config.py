@@ -71,9 +71,11 @@ def test_build_memu_config():
     assert config["user_config"]["model"] == MemUUser
 
 
-def test_memu_config_database_url():
-    """Test that memu config uses correct database URL."""
-    settings = Settings()
+def test_memu_config_database_url(monkeypatch):
+    """Test that memu config assembles database URL from POSTGRES_* components."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    settings = Settings(DATABASE_URL="")
     config = build_memu_config(settings)
 
     dsn = config["database_config"]["metadata_store"]["dsn"]
