@@ -4,6 +4,7 @@ This module uses subprocess isolation to test module-level initialization errors
 This approach avoids issues with shared module state and ensures clean test isolation.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -23,8 +24,6 @@ def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = N
     Returns:
         CompletedProcess with returncode, stdout, and stderr
     """
-    import os
-
     # Start with a clean environment based on current env
     env = os.environ.copy()
 
@@ -37,15 +36,15 @@ def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = N
     env.update(env_vars)
 
     # Run Python subprocess that imports app.main
-    result = subprocess.run(
+    return subprocess.run(  # noqa: S603
         [sys.executable, "-c", "from app.main import app; print(app.title)"],
         env=env,
         capture_output=True,
         text=True,
         cwd=str(PROJECT_ROOT),
         timeout=30,  # Prevent tests from hanging indefinitely
+        check=False,
     )
-    return result
 
 
 def test_app_requires_openai_api_key():

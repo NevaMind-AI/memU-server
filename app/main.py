@@ -1,3 +1,5 @@
+"""memU Server - FastAPI application entry point."""
+
 import json
 import os
 import traceback
@@ -16,10 +18,11 @@ app = FastAPI(title="memU Server", version="0.1.0")
 # Ensure required environment variables are set
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
-    raise RuntimeError(
+    msg = (
         "OPENAI_API_KEY environment variable is not set or is empty. "
         "Set OPENAI_API_KEY to a valid OpenAI API key before starting the server."
     )
+    raise RuntimeError(msg)
 
 # Get database URL using shared configuration utility
 database_url = get_database_url()

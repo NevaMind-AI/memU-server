@@ -1,12 +1,13 @@
-"""Database configuration and session management."""
+"""Database configuration utilities.
+
+This module provides helper functions for constructing database connection URLs.
+Table creation and ORM models are managed by memu-py (via ``ddl_mode: "create"``
+in its DatabaseConfig), so this server does NOT define its own SQLAlchemy models
+or maintain its own engine/session objects.
+"""
 
 import os
 from urllib.parse import quote
-
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel
-
-from app.models.base import Base
 
 
 def get_database_url() -> str:
@@ -46,30 +47,23 @@ def get_database_url() -> str:
     db_pass = os.getenv("DATABASE_PASSWORD")
     db_name = os.getenv("DATABASE_NAME")
 
-    # TODO: Improve validation to check for empty strings explicitly
-    # Current check 'if not value' treats empty string as missing
-    missing_vars = [
-        name
-        for name, value in [
-            ("DATABASE_HOST", db_host),
-            ("DATABASE_USER", db_user),
-            ("DATABASE_PASSWORD", db_pass),
-            ("DATABASE_NAME", db_name),
-        ]
-        if not value
-    ]
+    required_vars: dict[str, str | None] = {
+        "DATABASE_HOST": db_host,
+        "DATABASE_USER": db_user,
+        "DATABASE_PASSWORD": db_pass,
+        "DATABASE_NAME": db_name,
+    }
+    missing_vars = [name for name, value in required_vars.items() if not value]
 
     if missing_vars:
-        raise RuntimeError(
-            f"Database configuration is incomplete. Missing environment variables: {', '.join(missing_vars)}"
-        )
+        msg = f"Database configuration is incomplete. Missing environment variables: {', '.join(missing_vars)}"
+        raise RuntimeError(msg)
 
-    # At this point, we know db_user, db_pass, db_host, db_name are not None
-    # Use assertion to help mypy understand this
-    assert db_user is not None
-    assert db_pass is not None
-    assert db_host is not None
-    assert db_name is not None
+    # After validation, narrow types for mypy (values are guaranteed non-None and non-empty)
+    db_host = str(db_host)
+    db_user = str(db_user)
+    db_pass = str(db_pass)
+    db_name = str(db_name)
 
     # URL-encode username and password to handle special characters like '@', ':', '/'
     # Use quote(..., safe="") instead of quote_plus() for URL userinfo section
@@ -77,33 +71,3 @@ def get_database_url() -> str:
     db_pass_encoded = quote(db_pass, safe="")
 
     return f"postgresql+psycopg://{db_user_encoded}:{db_pass_encoded}@{db_host}:{db_port}/{db_name}"
-
-
-# TODO: Consider lazy initialization to avoid executing during module import
-# This would prevent database connection issues from failing tests that don't use the database
-# Get database URL using the shared function
-DATABASE_URL = get_database_url()
-
-# Create SQLAlchemy async engine
-engine = create_async_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-)
-# Async session factory
-# Note: autocommit is removed as it's not supported in SQLAlchemy 2.x async_sessionmaker
-SessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
-    autoflush=False,
-    expire_on_commit=False,
-    bind=engine,
-)
-
-# Re-export for backward compatibility
-__all__ = ["Base", "SQLModel", "SessionLocal", "engine", "get_db", "get_database_url"]
-
-
-async def get_db():
-    """Dependency for FastAPI to get async database session."""
-    async with SessionLocal() as db:
-        yield db

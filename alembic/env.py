@@ -1,4 +1,8 @@
-"""Alembic migration environment configuration."""
+"""Alembic migration environment configuration.
+
+Note: Memory-related tables are managed by memu-py (via ``ddl_mode: "create"``).
+Alembic is kept here for any future server-specific schema migrations.
+"""
 
 import os
 
@@ -8,15 +12,7 @@ from urllib.parse import quote
 
 from sqlalchemy import pool
 
-# Import the models package so any models imported in app.models are
-# registered in Base.metadata for Alembic autogenerate.
-import app.models  # noqa: F401
 from alembic import context
-
-# Import Base metadata for autogenerate support
-# Note: We import from app.models.base which is side-effect free
-# (doesn't create database connections or read environment variables)
-from app.models.base import Base
 
 
 def get_sync_database_url() -> str:
@@ -96,7 +92,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+target_metadata = None
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
