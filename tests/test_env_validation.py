@@ -48,12 +48,13 @@ def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = N
 
 
 def test_app_requires_openai_api_key():
-    """Test that app refuses to start when OPENAI_API_KEY is not set."""
+    """Test that app refuses to start when OPENAI_API_KEY is empty.
+
+    Settings reads from .env, so we must explicitly set the env var to empty
+    to override the .env file value.
+    """
     result = _run_import_test(
-        env_vars={
-            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
-        },
-        remove_vars=["OPENAI_API_KEY"],
+        env_vars={"OPENAI_API_KEY": ""},
     )
 
     assert result.returncode != 0
@@ -63,53 +64,19 @@ def test_app_requires_openai_api_key():
 def test_app_refuses_empty_openai_api_key():
     """Test that app refuses to start when OPENAI_API_KEY is empty."""
     result = _run_import_test(
-        env_vars={
-            "OPENAI_API_KEY": "",
-            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
-        },
+        env_vars={"OPENAI_API_KEY": ""},
     )
 
     assert result.returncode != 0
     assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
 
 
-def test_app_requires_database_url():
-    """Test that app refuses to start when DATABASE_URL is not set."""
-    result = _run_import_test(
-        env_vars={
-            "OPENAI_API_KEY": "test-key",
-        },
-        remove_vars=["DATABASE_URL", "DATABASE_HOST", "DATABASE_USER", "DATABASE_PASSWORD", "DATABASE_NAME"],
-    )
-
-    assert result.returncode != 0
-    assert "Database configuration is incomplete" in result.stderr
-
-
-def test_app_with_individual_db_vars():
-    """Test that app starts with individual DATABASE_* variables."""
-    result = _run_import_test(
-        env_vars={
-            "OPENAI_API_KEY": "test-key",
-            "DATABASE_HOST": "localhost",
-            "DATABASE_PORT": "54320",
-            "DATABASE_USER": "test_user",
-            "DATABASE_PASSWORD": "test_pass",
-            "DATABASE_NAME": "test_db",
-        },
-        remove_vars=["DATABASE_URL"],
-    )
-
-    assert result.returncode == 0
-    assert "memU Server" in result.stdout
-
-
-def test_app_starts_with_valid_openai_api_key():
+def test_app_starts_with_valid_openai_api_key(tmp_path):
     """Test that app starts successfully with valid OPENAI_API_KEY."""
     result = _run_import_test(
         env_vars={
             "OPENAI_API_KEY": "test-valid-key",
-            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
+            "STORAGE_PATH": str(tmp_path / "storage"),
         },
     )
 

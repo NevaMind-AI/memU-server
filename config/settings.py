@@ -1,7 +1,5 @@
 """Application settings for memu-server."""
 
-from typing import Any
-
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,19 +11,12 @@ class Settings(BaseSettings):
     Values are resolved in order: environment variable > .env file > default.
     """
 
-    # ── Database (docker-compose level) ──
+    # ── Database ──
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "memu_dev"
-
-    # ── Database (application level, used by app/database.py) ──
-    DATABASE_HOST: str = "localhost"
-    DATABASE_PORT: int = 5432
-    DATABASE_USER: str = "postgres"
-    DATABASE_PASSWORD: str = ""
-    DATABASE_NAME: str = "memu"
     DATABASE_URL: str = ""
 
     # ── LLM ──
@@ -46,18 +37,16 @@ class Settings(BaseSettings):
     # ── Storage ──
     STORAGE_PATH: str = "./data/storage"
 
-    # ── Computed fields ──
-    database_url: str = ""
-
-    @field_validator("database_url", mode="after")
+    @field_validator("DATABASE_URL", mode="after")
     @classmethod
-    def assemble_db_url(cls, v: str | None, info: ValidationInfo) -> Any:
-        if isinstance(v, str) and v == "":
-            return (
-                f"postgresql+psycopg://{info.data['POSTGRES_USER']}:{info.data['POSTGRES_PASSWORD']}"
-                f"@{info.data['POSTGRES_HOST']}:{info.data['POSTGRES_PORT']}/{info.data['POSTGRES_DB']}"
-            )
-        return v
+    def assemble_db_url(cls, v: str, info: ValidationInfo) -> str:
+        """Build DATABASE_URL from POSTGRES_* components when not explicitly set."""
+        if v.strip():
+            return v
+        return (
+            f"postgresql+psycopg://{info.data['POSTGRES_USER']}:{info.data['POSTGRES_PASSWORD']}"
+            f"@{info.data['POSTGRES_HOST']}:{info.data['POSTGRES_PORT']}/{info.data['POSTGRES_DB']}"
+        )
 
     @property
     def temporal_url(self) -> str:

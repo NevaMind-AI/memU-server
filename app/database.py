@@ -60,10 +60,10 @@ def get_database_url() -> str:
         raise RuntimeError(msg)
 
     # After validation, narrow types for mypy (values are guaranteed non-None and non-empty)
-    db_host = str(db_host)
-    db_user = str(db_user)
-    db_pass = str(db_pass)
-    db_name = str(db_name)
+    assert db_host is not None  # noqa: S101 - guaranteed by validation above
+    assert db_user is not None  # noqa: S101
+    assert db_pass is not None  # noqa: S101
+    assert db_name is not None  # noqa: S101
 
     # URL-encode username and password to handle special characters like '@', ':', '/'
     # Use quote(..., safe="") instead of quote_plus() for URL userinfo section

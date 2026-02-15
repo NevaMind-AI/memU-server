@@ -1,5 +1,7 @@
 """MemU configuration for memory service."""
 
+from typing import Any
+
 from pydantic import BaseModel
 
 from config.settings import Settings
@@ -12,7 +14,7 @@ class MemUUser(BaseModel):
     agent_id: str | None = None
 
 
-def build_memu_llm_profiles(settings: Settings) -> dict:
+def build_memu_llm_profiles(settings: Settings) -> dict[str, Any]:
     """Build LLM profiles for memu-py."""
     return {
         "default": {
@@ -28,7 +30,7 @@ def build_memu_llm_profiles(settings: Settings) -> dict:
     }
 
 
-def build_memu_config(settings: Settings) -> dict:
+def build_memu_config(settings: Settings) -> dict[str, Any]:
     """Build memu-py core configuration.
 
     This configures memu-py to:
@@ -42,7 +44,7 @@ def build_memu_config(settings: Settings) -> dict:
             "metadata_store": {
                 "provider": "postgres",
                 "ddl_mode": "create",  # Auto-create tables
-                "dsn": settings.database_url,
+                "dsn": settings.DATABASE_URL,
             }
         },
         "user_config": {"model": MemUUser},

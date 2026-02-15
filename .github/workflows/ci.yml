@@ -32,8 +32,8 @@ jobs:
         run: |
           uv lock --locked
           uv run pre-commit run --all-files
-          uv run mypy app
-          uv run deptry app
+          uv run mypy app config
+          uv run deptry app config
 
       - name: Run tests with coverage
         run: uv run pytest --cov=app --cov-report=xml --cov-report=term

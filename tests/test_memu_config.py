@@ -30,6 +30,28 @@ def test_build_memu_llm_profiles():
     assert "embed_model" in profiles["embedding"]
 
 
+def test_build_memu_llm_profiles_uses_env_values(monkeypatch):
+    """Test that LLM profiles pick up values from environment variables."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")
+    monkeypatch.setenv("DEFAULT_LLM_MODEL", "gpt-4o")
+    monkeypatch.setenv("EMBEDDING_API_KEY", "embed-key")
+
+    settings = Settings()
+    profiles = build_memu_llm_profiles(settings)
+
+    assert profiles["default"]["api_key"] == "sk-test-key"
+    assert profiles["default"]["chat_model"] == "gpt-4o"
+    assert profiles["embedding"]["api_key"] == "embed-key"
+
+
+def test_build_memu_llm_profiles_embedding_fallback():
+    """Test that embedding profile falls back to OPENAI_API_KEY when EMBEDDING_API_KEY is empty."""
+    settings = Settings(OPENAI_API_KEY="sk-openai", EMBEDDING_API_KEY="")
+    profiles = build_memu_llm_profiles(settings)
+
+    assert profiles["embedding"]["api_key"] == "sk-openai"
+
+
 def test_build_memu_config():
     """Test building complete memu config."""
     settings = Settings()
@@ -57,3 +79,13 @@ def test_memu_config_database_url():
     dsn = config["database_config"]["metadata_store"]["dsn"]
     assert "postgresql+psycopg" in dsn
     assert settings.POSTGRES_DB in dsn
+
+
+def test_memu_config_database_url_override():
+    """Test that an explicit DATABASE_URL overrides POSTGRES_* assembly."""
+    explicit_url = "postgresql+psycopg://custom:pass@remote:5432/prod"
+    settings = Settings(DATABASE_URL=explicit_url)
+    config = build_memu_config(settings)
+
+    dsn = config["database_config"]["metadata_store"]["dsn"]
+    assert dsn == explicit_url
