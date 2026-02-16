@@ -39,8 +39,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         _app.state.service = create_memory_service(settings)
     except Exception as exc:
         # Log full traceback for operators and wrap in a clearer startup error
-        logger.exception("Failed to initialize MemoryService during application startup")
         msg = "Failed to initialize MemoryService during application startup"
+        logger.exception(msg)
         raise RuntimeError(msg) from exc
     yield
 
