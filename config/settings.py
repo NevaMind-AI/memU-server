@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
 
-    Values are resolved in order: environment variable > .env file > default.
+    Values are resolved in order: init kwargs > environment variable > .env file > default.
     """
 
     # ── Database ──
