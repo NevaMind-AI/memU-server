@@ -104,7 +104,7 @@ enable = ["W0102", "W0212", "W0611"]  # dangerous-default-value, protected-acces
 [tool.deptry.per_rule_ignores]
 DEP002 = [
     "uvicorn",           # Will be used for production deployment
-    "psycopg",           # PostgreSQL adapter (used in connection URLs)
+    "psycopg",           # PostgreSQL adapter used by memu-py[postgres] and alembic
     "temporalio",        # Planned for workflow orchestration
     "python-dotenv",     # Environment variables (loaded by pydantic-settings)
 ]
@@ -112,7 +112,6 @@ DEP003 = [
     "app",               # Project's own package, not an external dependency
     "config",            # Project's own config package
     "pydantic",          # Re-exported by pydantic-settings
-    "pydantic_core",     # Re-exported by pydantic-settings
 ]
 
 [tool.mypy]

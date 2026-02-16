@@ -13,7 +13,7 @@ def client():
         from app.main import app  # noqa: PLC0415
 
         return TestClient(app)
-    except Exception as exc:  # noqa: BLE001 - lifespan may raise DB errors
+    except (RuntimeError, ImportError) as exc:  # lifespan wraps errors in RuntimeError; import may raise ImportError
         pytest.skip(f"Could not initialize test client due to application setup error: {exc}")
 
 

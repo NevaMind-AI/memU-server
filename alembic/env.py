@@ -93,6 +93,19 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = None
+# NOTE: Alembic's autogenerate relies on `target_metadata` to discover the
+# current schema from SQLAlchemy models.  It is intentionally set to None
+# because all current tables are managed externally by memu-py (see module
+# docstring), so there is no server-specific SQLAlchemy metadata to inspect.
+#
+# Implications:
+#   * `alembic revision --autogenerate` will NOT detect any changes.
+#   * Any migrations must use explicit operations (e.g. op.create_table).
+#
+# When you introduce server-specific tables, define a SQLAlchemy
+# MetaData / declarative Base and assign it here, for example:
+#     from myapp.models import Base
+#     target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

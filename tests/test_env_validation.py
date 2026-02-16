@@ -62,7 +62,7 @@ def test_app_requires_openai_api_key(tmp_path):
     )
 
     assert result.returncode != 0
-    assert "OPENAI_API_KEY" in result.stderr
+    assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
 
 
 def test_app_starts_with_valid_openai_api_key(tmp_path):
