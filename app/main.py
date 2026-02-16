@@ -27,13 +27,13 @@ if not settings.OPENAI_API_KEY.strip():
 
 # Storage directory for conversation files
 storage_dir = Path(settings.STORAGE_PATH)
-storage_dir.mkdir(parents=True, exist_ok=True)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Initialise MemoryService on startup (defers DB connection until the app runs)."""
     try:
+        storage_dir.mkdir(parents=True, exist_ok=True)
         _app.state.service = create_memory_service(settings)
     except Exception as exc:
         # Log full traceback for operators and wrap in a clearer startup error
@@ -58,7 +58,7 @@ async def memorize(request: Request, payload: dict[str, Any]):
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @app.post("/retrieve")
@@ -70,7 +70,8 @@ async def retrieve(request: Request, payload: dict[str, Any]):
         result = await service.retrieve([payload["query"]])
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @app.get("/")

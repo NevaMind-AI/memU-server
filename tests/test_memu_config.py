@@ -110,3 +110,17 @@ def test_memu_config_database_url_password_encoding(monkeypatch):
     # URL-encoded representations of '@' and ':' should be present
     assert "%40" in dsn
     assert "%3A" in dsn
+
+
+def test_database_url_prefix_normalisation():
+    """Test that common Postgres DSN prefixes are normalised to postgresql+psycopg://."""
+    for prefix in ("postgres://", "postgresql://", "postgresql+asyncpg://"):
+        url = f"{prefix}user:pass@host:5432/db"
+        settings = Settings(DATABASE_URL=url)
+        assert settings.DATABASE_URL.startswith("postgresql+psycopg://")
+        assert settings.DATABASE_URL.endswith("user:pass@host:5432/db")
+
+    # Already correct prefix should remain unchanged
+    correct = "postgresql+psycopg://user:pass@host:5432/db"
+    settings = Settings(DATABASE_URL=correct)
+    assert settings.DATABASE_URL == correct

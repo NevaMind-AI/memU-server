@@ -2,8 +2,7 @@
 
 from urllib.parse import quote
 
-from pydantic import field_validator
-from pydantic_core.core_schema import ValidationInfo
+from pydantic import ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,10 +14,10 @@ class Settings(BaseSettings):
 
     # ── Database ──
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = ""
+    POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "memu_dev"
+    POSTGRES_DB: str = "memu"
     DATABASE_URL: str = ""
 
     # ── LLM ──
@@ -46,8 +45,18 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL", mode="after")
     @classmethod
     def assemble_db_url(cls, v: str, info: ValidationInfo) -> str:
-        """Build DATABASE_URL from POSTGRES_* components when not explicitly set."""
+        """Build DATABASE_URL from POSTGRES_* components when not explicitly set.
+
+        When a URL is provided explicitly, common Postgres prefixes
+        (``postgresql://``, ``postgres://``, ``postgresql+asyncpg://``)
+        are normalised to ``postgresql+psycopg://`` so the correct
+        driver is always selected.
+        """
         if v.strip():
+            # Normalise common DSN prefixes to the psycopg driver
+            for prefix in ("postgres://", "postgresql://", "postgresql+asyncpg://"):
+                if v.startswith(prefix):
+                    return "postgresql+psycopg://" + v[len(prefix) :]
             return v
         user = quote(info.data["POSTGRES_USER"], safe="")
         password = quote(info.data["POSTGRES_PASSWORD"], safe="")
