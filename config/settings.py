@@ -58,8 +58,13 @@ class Settings(BaseSettings):
                 if v.startswith(prefix):
                     return "postgresql+psycopg://" + v[len(prefix) :]
             return v
-        user = quote(info.data["POSTGRES_USER"], safe="")
-        password = quote(info.data["POSTGRES_PASSWORD"], safe="")
+        # Preserve RFC 3986 sub-delimiters so characters like '!' are
+        # NOT percent-encoded.  Percent-encoded values (e.g. %21) break
+        # memu-py's internal Alembic configparser which treats '%' as an
+        # interpolation character.
+        _sub_delims = "!$&'()*+,;="
+        user = quote(info.data["POSTGRES_USER"], safe=_sub_delims)
+        password = quote(info.data["POSTGRES_PASSWORD"], safe=_sub_delims)
         return (
             f"postgresql+psycopg://{user}:{password}"
             f"@{info.data['POSTGRES_HOST']}:{info.data['POSTGRES_PORT']}/{info.data['POSTGRES_DB']}"
