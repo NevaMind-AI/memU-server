@@ -1,7 +1,7 @@
 """memU Server - FastAPI application entry point."""
 
 import json
-import traceback
+import logging
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 
 from app.services.memu import create_memory_service
 from config.settings import Settings
+
+logger = logging.getLogger(__name__)
 
 # Load settings from environment / .env
 settings = Settings()
@@ -37,7 +39,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         _app.state.service = create_memory_service(settings)
     except Exception as exc:
         # Log full traceback for operators and wrap in a clearer startup error
-        traceback.print_exc()
+        logger.exception("Failed to initialize MemoryService during application startup")
         msg = "Failed to initialize MemoryService during application startup"
         raise RuntimeError(msg) from exc
     yield
@@ -57,7 +59,7 @@ async def memorize(request: Request, payload: dict[str, Any]):
         result = await service.memorize(resource_url=str(file_path), modality="conversation")
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
-        traceback.print_exc()
+        logger.exception("Memorize request failed")
         raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
@@ -70,7 +72,7 @@ async def retrieve(request: Request, payload: dict[str, Any]):
         result = await service.retrieve([payload["query"]])
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
-        traceback.print_exc()
+        logger.exception("Retrieve request failed")
         raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
