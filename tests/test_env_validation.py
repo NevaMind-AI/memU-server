@@ -4,6 +4,7 @@ This module uses subprocess isolation to test module-level initialization errors
 This approach avoids issues with shared module state and ensures clean test isolation.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -23,8 +24,6 @@ def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = N
     Returns:
         CompletedProcess with returncode, stdout, and stderr
     """
-    import os
-
     # Start with a clean environment based on current env
     env = os.environ.copy()
 
@@ -37,36 +36,28 @@ def _run_import_test(env_vars: dict[str, str], remove_vars: list[str] | None = N
     env.update(env_vars)
 
     # Run Python subprocess that imports app.main
-    result = subprocess.run(
+    return subprocess.run(  # noqa: S603
         [sys.executable, "-c", "from app.main import app; print(app.title)"],
         env=env,
         capture_output=True,
         text=True,
         cwd=str(PROJECT_ROOT),
         timeout=30,  # Prevent tests from hanging indefinitely
-    )
-    return result
-
-
-def test_app_requires_openai_api_key():
-    """Test that app refuses to start when OPENAI_API_KEY is not set."""
-    result = _run_import_test(
-        env_vars={
-            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
-        },
-        remove_vars=["OPENAI_API_KEY"],
+        check=False,
     )
 
-    assert result.returncode != 0
-    assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
 
+def test_app_requires_openai_api_key(tmp_path):
+    """Test that app refuses to start when OPENAI_API_KEY is empty.
 
-def test_app_refuses_empty_openai_api_key():
-    """Test that app refuses to start when OPENAI_API_KEY is empty."""
+    OPENAI_API_KEY defaults to empty string in Settings and is validated
+    at startup to be non-empty via a RuntimeError guard in main.py.
+    """
     result = _run_import_test(
         env_vars={
             "OPENAI_API_KEY": "",
-            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
+            "EMBEDDING_API_KEY": "test",
+            "STORAGE_PATH": str(tmp_path / "storage"),
         },
     )
 
@@ -74,43 +65,13 @@ def test_app_refuses_empty_openai_api_key():
     assert "OPENAI_API_KEY environment variable is not set or is empty" in result.stderr
 
 
-def test_app_requires_database_url():
-    """Test that app refuses to start when DATABASE_URL is not set."""
-    result = _run_import_test(
-        env_vars={
-            "OPENAI_API_KEY": "test-key",
-        },
-        remove_vars=["DATABASE_URL", "DATABASE_HOST", "DATABASE_USER", "DATABASE_PASSWORD", "DATABASE_NAME"],
-    )
-
-    assert result.returncode != 0
-    assert "Database configuration is incomplete" in result.stderr
-
-
-def test_app_with_individual_db_vars():
-    """Test that app starts with individual DATABASE_* variables."""
-    result = _run_import_test(
-        env_vars={
-            "OPENAI_API_KEY": "test-key",
-            "DATABASE_HOST": "localhost",
-            "DATABASE_PORT": "54320",
-            "DATABASE_USER": "test_user",
-            "DATABASE_PASSWORD": "test_pass",
-            "DATABASE_NAME": "test_db",
-        },
-        remove_vars=["DATABASE_URL"],
-    )
-
-    assert result.returncode == 0
-    assert "memU Server" in result.stdout
-
-
-def test_app_starts_with_valid_openai_api_key():
+def test_app_starts_with_valid_openai_api_key(tmp_path):
     """Test that app starts successfully with valid OPENAI_API_KEY."""
     result = _run_import_test(
         env_vars={
             "OPENAI_API_KEY": "test-valid-key",
-            "DATABASE_URL": "postgresql+psycopg://test:test@localhost:5432/test",
+            "EMBEDDING_API_KEY": "test-embed-key",
+            "STORAGE_PATH": str(tmp_path / "storage"),
         },
     )
 

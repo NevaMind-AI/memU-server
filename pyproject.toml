@@ -8,26 +8,20 @@ requires-python = ">=3.13"
 dependencies = [
     # Web Framework
     "fastapi[standard]>=0.122.0",
-    "memu-py>=1.2.0",
     "uvicorn[standard]>=0.35.0",
 
-    # Database & ORM
-    "sqlmodel>=0.0.27",
-    "sqlalchemy[asyncio]>=2.0.41",
+    # Memory Service (includes sqlmodel, openai, pendulum, etc.)
+    "memu-py[postgres]>=1.2.0",
+
+    # Database driver (needed for connection URL construction)
     "psycopg[binary,pool]>=3.2.9",
-    "alembic>=1.16.2",
-    "pgvector>=0.3.2",
 
     # Workflow Engine
     "temporalio==1.16.0",
 
-    # LLM & AI
-    "openai>=1.54.4",
-
     # Configuration & Utils
     "pydantic-settings>=2.10.1",
     "python-dotenv>=1.0.0",
-    "pendulum>=3.1.0",
 ]
 
 [dependency-groups]
@@ -49,7 +43,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app"]
+packages = ["app", "config"]
 
 [tool.ruff]
 line-length = 120
@@ -76,7 +70,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["app"]
+source = ["app", "config"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
@@ -110,24 +104,19 @@ enable = ["W0102", "W0212", "W0611"]  # dangerous-default-value, protected-acces
 [tool.deptry.per_rule_ignores]
 DEP002 = [
     "uvicorn",           # Will be used for production deployment
-    "sqlmodel",          # Planned for database models
-    "sqlalchemy",        # Database ORM (used by sqlmodel)
-    "psycopg",           # PostgreSQL adapter
-    "alembic",           # Database migrations
-    "pgvector",          # Vector database support
+    "psycopg",           # PostgreSQL adapter used by memu-py[postgres] and alembic
     "temporalio",        # Planned for workflow orchestration
-    "openai",            # AI functionality (may be used indirectly via memu-py)
-    "pydantic-settings", # Configuration management (future use)
-    "python-dotenv",     # Environment variables (future use)
-    "pendulum",          # Date/time handling (future use)
+    "python-dotenv",     # Environment variables (loaded by pydantic-settings)
 ]
 DEP003 = [
     "app",               # Project's own package, not an external dependency
+    "config",            # Project's own config package
+    "pydantic",          # Re-exported by pydantic-settings
 ]
 
 [tool.mypy]
 python_version = "3.13"
-files = ["app"]
+files = ["app", "config"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Gradually enable
