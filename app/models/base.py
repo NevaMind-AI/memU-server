@@ -2,8 +2,8 @@
 
 from datetime import UTC, datetime
 
+from ksuid import Ksuid
 from sqlmodel import DateTime, Field, SQLModel
-from svix_ksuid import ksuid
 
 
 class BaseModel(SQLModel):
@@ -13,7 +13,7 @@ class BaseModel(SQLModel):
     """
 
     id: str = Field(
-        default_factory=lambda: str(ksuid()),
+        default_factory=lambda: str(Ksuid()),
         primary_key=True,
         index=True,
         description="Primary key using KSUID",

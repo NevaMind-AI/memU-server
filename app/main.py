@@ -10,6 +10,13 @@ from fastapi.responses import JSONResponse
 from memu.app import MemoryService
 
 from app.database import get_database_url
+from app.schemas.memory import (
+    CategoryObject,
+    ClearMemoriesRequest,
+    ClearMemoriesResponse,
+    ListCategoriesRequest,
+    ListCategoriesResponse,
+)
 
 app = FastAPI(title="memU Server", version="0.1.0")
 
@@ -65,6 +72,45 @@ async def retrieve(payload: dict[str, Any]):
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/clear")
+async def clear_memory(request: ClearMemoriesRequest):
+    """Clear memories for a user/agent."""
+    try:
+        where = request.model_dump(exclude_none=True)
+        result = await service.clear_memory(where=where)
+
+        return ClearMemoriesResponse(
+            purged_categories=len(result.get("deleted_categories", [])),
+            purged_items=len(result.get("deleted_items", [])),
+            purged_resources=len(result.get("deleted_resources", [])),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear memory: {e!s}") from e
+
+
+@app.post("/categories")
+async def list_categories(request: ListCategoriesRequest):
+    """List all memory categories for a user."""
+    try:
+        where = request.model_dump(exclude_none=True)
+        result = await service.list_memory_categories(where=where)
+
+        return ListCategoriesResponse(
+            categories=[
+                CategoryObject(
+                    name=cat["name"],
+                    description=cat["description"],
+                    user_id=cat["user_id"],
+                    agent_id=cat["agent_id"],
+                    summary=cat.get("summary"),
+                )
+                for cat in result.get("categories", [])
+            ]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list categories: {e!s}") from e
 
 
 @app.get("/")
