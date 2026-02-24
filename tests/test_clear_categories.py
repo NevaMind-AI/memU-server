@@ -1,6 +1,6 @@
 """Tests for /clear and /categories endpoints."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -38,8 +38,10 @@ def client(mock_service):
     """Create FastAPI test client with mocked service."""
     from app.main import app
 
-    app.state.service = mock_service
-    return TestClient(app)
+    # Patch create_memory_service so lifespan doesn't connect to a real DB
+    with patch("app.main.create_memory_service", return_value=mock_service):
+        with TestClient(app) as test_client:
+            yield test_client
 
 
 # ── Clear endpoint tests ──
@@ -50,9 +52,10 @@ def test_clear_memory_success(client):
     response = client.post("/clear", json={"user_id": "user123"})
     assert response.status_code == 200
     data = response.json()
-    assert data["purged_categories"] == 1
-    assert data["purged_items"] == 2
-    assert data["purged_resources"] == 0
+    assert data["status"] == "success"
+    assert data["result"]["purged_categories"] == 1
+    assert data["result"]["purged_items"] == 2
+    assert data["result"]["purged_resources"] == 0
 
 
 def test_clear_memory_with_agent_id(mock_service, client):
@@ -91,9 +94,10 @@ def test_list_categories_success(client):
     response = client.post("/categories", json={"user_id": "user123"})
     assert response.status_code == 200
     data = response.json()
-    assert len(data["categories"]) == 1
-    assert data["categories"][0]["name"] == "work"
-    assert data["categories"][0]["user_id"] == "user123"
+    assert data["status"] == "success"
+    assert len(data["result"]["categories"]) == 1
+    assert data["result"]["categories"][0]["name"] == "work"
+    assert data["result"]["categories"][0]["user_id"] == "user123"
 
 
 def test_list_categories_with_agent_id(mock_service, client):
@@ -115,7 +119,7 @@ def test_list_categories_empty_result(mock_service, client):
     mock_service.list_memory_categories = AsyncMock(return_value={"categories": []})
     response = client.post("/categories", json={"user_id": "user123"})
     assert response.status_code == 200
-    assert response.json()["categories"] == []
+    assert response.json()["result"]["categories"] == []
 
 
 def test_list_categories_service_error(mock_service, client):

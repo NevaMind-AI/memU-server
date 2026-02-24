@@ -43,7 +43,7 @@ class CategoryObject(BaseModel):
     name: str
     description: str
     user_id: str
-    agent_id: str
+    agent_id: str | None = None
     summary: str | None = None
 
 

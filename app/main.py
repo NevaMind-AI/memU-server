@@ -91,11 +91,12 @@ async def clear_memory(request: Request, body: ClearMemoriesRequest):
         where = body.model_dump(exclude_none=True)
         result = await service.clear_memory(where=where)
 
-        return ClearMemoriesResponse(
+        response = ClearMemoriesResponse(
             purged_categories=len(result.get("deleted_categories", [])),
             purged_items=len(result.get("deleted_items", [])),
             purged_resources=len(result.get("deleted_resources", [])),
         )
+        return JSONResponse(content={"status": "success", "result": response.model_dump()})
     except Exception as exc:
         logger.exception("Clear memory request failed")
         raise HTTPException(status_code=500, detail="Internal server error") from exc
@@ -109,7 +110,7 @@ async def list_categories(request: Request, body: ListCategoriesRequest):
         where = body.model_dump(exclude_none=True)
         result = await service.list_memory_categories(where=where)
 
-        return ListCategoriesResponse(
+        response = ListCategoriesResponse(
             categories=[
                 CategoryObject(
                     name=cat["name"],
@@ -121,6 +122,7 @@ async def list_categories(request: Request, body: ListCategoriesRequest):
                 for cat in result.get("categories", [])
             ]
         )
+        return JSONResponse(content={"status": "success", "result": response.model_dump()})
     except Exception as exc:
         logger.exception("List categories request failed")
         raise HTTPException(status_code=500, detail="Internal server error") from exc
