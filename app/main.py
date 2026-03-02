@@ -11,6 +11,13 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from app.schemas.memory import (
+    CategoryObject,
+    ClearMemoriesRequest,
+    ClearMemoriesResponse,
+    ListCategoriesRequest,
+    ListCategoriesResponse,
+)
 from app.services.memu import create_memory_service
 from config.settings import Settings
 
@@ -73,6 +80,51 @@ async def retrieve(request: Request, payload: dict[str, Any]):
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
         logger.exception("Retrieve request failed")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@app.post("/clear")
+async def clear_memory(request: Request, body: ClearMemoriesRequest):
+    """Clear memories for a user/agent."""
+    try:
+        service = request.app.state.service
+        where = body.model_dump(exclude_none=True)
+        result = await service.clear_memory(where=where)
+
+        response = ClearMemoriesResponse(
+            purged_categories=len(result.get("deleted_categories", [])),
+            purged_items=len(result.get("deleted_items", [])),
+            purged_resources=len(result.get("deleted_resources", [])),
+        )
+        return JSONResponse(content={"status": "success", "result": response.model_dump()})
+    except Exception as exc:
+        logger.exception("Clear memory request failed")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@app.post("/categories")
+async def list_categories(request: Request, body: ListCategoriesRequest):
+    """List all memory categories for a user."""
+    try:
+        service = request.app.state.service
+        where = body.model_dump(exclude_none=True)
+        result = await service.list_memory_categories(where=where)
+
+        response = ListCategoriesResponse(
+            categories=[
+                CategoryObject(
+                    name=cat["name"],
+                    description=cat["description"],
+                    user_id=cat["user_id"],
+                    agent_id=cat["agent_id"],
+                    summary=cat.get("summary"),
+                )
+                for cat in result.get("categories", [])
+            ]
+        )
+        return JSONResponse(content={"status": "success", "result": response.model_dump()})
+    except Exception as exc:
+        logger.exception("List categories request failed")
         raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
