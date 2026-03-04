@@ -27,8 +27,8 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
         Dict with finished_at timestamp and status.
 
     Raises:
-        ValueError: If required fields are missing from spec.
-        activity.ApplicationError: If memorization fails.
+        ApplicationError: If required fields are missing from spec (non-retryable).
+        ApplicationError: If memorization fails.
     """
     task_id = spec.get("task_id", "unknown")
 
@@ -36,7 +36,7 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
     missing = [f for f in _REQUIRED_FIELDS if f not in spec]
     if missing:
         msg = f"Missing required field(s) in spec: {', '.join(missing)}"
-        raise ValueError(msg)
+        raise ApplicationError(msg, non_retryable=True)
 
     logger.info("Starting memorize activity for task %s", task_id)
 

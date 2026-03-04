@@ -85,11 +85,15 @@ async def test_task_memorize_failure():
 
 @pytest.mark.asyncio
 async def test_task_memorize_missing_required_fields():
-    """Test that missing required fields raises ValueError."""
+    """Test that missing required fields raises non-retryable ApplicationError."""
+    from temporalio.exceptions import ApplicationError
+
     spec_missing = {"task_id": "test-001"}  # missing resource_url and user_id
 
-    with pytest.raises(ValueError, match="resource_url"):
+    with pytest.raises(ApplicationError, match="resource_url") as exc_info:
         await task_memorize(spec_missing)
+
+    assert exc_info.value.non_retryable is True
 
 
 @pytest.mark.asyncio
