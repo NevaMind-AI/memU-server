@@ -58,6 +58,13 @@ async def async_main() -> None:
     logging.basicConfig(level=logging.INFO)
     settings = Settings()
 
+    # Fail fast if critical env vars are missing (same guard as app/main.py)
+    if not settings.OPENAI_API_KEY or not settings.OPENAI_API_KEY.strip():
+        raise SystemExit(
+            "OPENAI_API_KEY environment variable is not set or is empty. "
+            "Set OPENAI_API_KEY to a valid OpenAI API key before starting the worker."
+        )
+
     client = await create_temporal_client(settings)
     try:
         await run_worker(client)

@@ -47,11 +47,17 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
     try:
         settings = Settings()
 
+        # Validate override_config type if provided
+        override_config = spec.get("override_config")
+        if override_config is not None and not isinstance(override_config, dict):
+            msg = f"override_config must be a dict, got {type(override_config).__name__}"
+            raise ApplicationError(msg, non_retryable=True)
+
         # Build MemoryService with optional config override
-        if spec.get("override_config"):
+        if override_config:
             service = create_memory_service(
                 settings=settings,
-                memorize_config=spec["override_config"],
+                memorize_config=override_config,
             )
         else:
             service = create_memory_service(settings=settings)
@@ -76,10 +82,12 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
             "result": _safe_serialize(result),
         }
 
+    except ApplicationError:
+        raise
     except Exception as e:
         logger.exception("Memorize activity failed for task %s: %r", task_id, e)
-        # Raise ApplicationError so Temporal treats this as a failure and applies retry policy
-        raise ApplicationError(f"Memorize activity failed for task {task_id}: {e}") from e
+        # Raise with generic message to avoid leaking sensitive info into Temporal history
+        raise ApplicationError(f"Memorize activity failed for task {task_id}") from e
 
 
 def _safe_serialize(obj: Any) -> Any:
