@@ -36,7 +36,7 @@ async def run_worker(client: Client) -> None:
         task_queue=TASK_QUEUE,
         workflows=[MemorizeWorkflow],
         activities=[task_memorize],
-        identity="memu-worker",
+        identity=TASK_QUEUE,
     )
 
     logger.info("Starting Temporal worker on task queue: %s", TASK_QUEUE)
@@ -54,8 +54,8 @@ async def async_main() -> None:
     client = await create_temporal_client(settings)
     try:
         await run_worker(client)
-    except KeyboardInterrupt:
-        logger.info("Received interrupt signal, shutting down...")
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        logger.info("Received shutdown signal, stopping worker...")
 
 
 def main() -> None:

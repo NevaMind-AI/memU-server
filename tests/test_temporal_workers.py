@@ -201,4 +201,4 @@ async def test_run_worker_registers_workflow_and_activities():
     assert call_kwargs["task_queue"] == "memu-worker"
     assert MemorizeWorkflow in call_kwargs["workflows"]
     assert task_memorize in call_kwargs["activities"]
-    assert call_kwargs["identity"] == "memu-worker"
+    assert call_kwargs["identity"] == TASK_QUEUE
