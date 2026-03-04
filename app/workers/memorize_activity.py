@@ -30,7 +30,14 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
         ApplicationError: If required fields are missing or empty (non-retryable).
         ApplicationError: If memorization fails.
     """
-    task_id = spec.get("task_id", "unknown")
+    task_id = spec.get("task_id", "unknown") if isinstance(spec, dict) else "unknown"
+
+    # Validate spec is a dict
+    if not isinstance(spec, dict):
+        raise ApplicationError(
+            f"spec must be a dict, got {type(spec).__name__}",
+            non_retryable=True,
+        )
 
     # Validate required fields up front (must be present, string, and non-empty)
     missing: list[str] = []

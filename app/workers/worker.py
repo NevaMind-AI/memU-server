@@ -58,7 +58,7 @@ async def async_main() -> None:
     logging.basicConfig(level=logging.INFO)
     settings = Settings()
 
-    # Fail fast if critical env vars are missing (same guard as app/main.py)
+    # Fail fast if OPENAI_API_KEY is missing (required by MemoryService in activities)
     if not settings.OPENAI_API_KEY or not settings.OPENAI_API_KEY.strip():
         raise SystemExit(
             "OPENAI_API_KEY environment variable is not set or is empty. "

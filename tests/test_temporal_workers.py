@@ -123,6 +123,17 @@ async def test_task_memorize_none_required_fields():
 
 
 @pytest.mark.asyncio
+async def test_task_memorize_non_dict_spec():
+    """Test that non-dict spec raises non-retryable ApplicationError."""
+    from temporalio.exceptions import ApplicationError
+
+    with pytest.raises(ApplicationError, match="spec must be a dict") as exc_info:
+        await task_memorize(None)
+
+    assert exc_info.value.non_retryable is True
+
+
+@pytest.mark.asyncio
 async def test_task_memorize_invalid_override_config():
     """Test that non-dict override_config raises non-retryable ApplicationError."""
     from temporalio.exceptions import ApplicationError
