@@ -56,8 +56,6 @@ async def async_main() -> None:
         await run_worker(client)
     except KeyboardInterrupt:
         logger.info("Received interrupt signal, shutting down...")
-    finally:
-        await client.close()
 
 
 def main() -> None:
