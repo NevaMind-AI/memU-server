@@ -97,6 +97,32 @@ async def test_task_memorize_missing_required_fields():
 
 
 @pytest.mark.asyncio
+async def test_task_memorize_empty_required_fields():
+    """Test that empty-string required fields raises non-retryable ApplicationError."""
+    from temporalio.exceptions import ApplicationError
+
+    spec_empty = {"task_id": "t1", "resource_url": "", "user_id": "  "}
+
+    with pytest.raises(ApplicationError, match="resource_url") as exc_info:
+        await task_memorize(spec_empty)
+
+    assert exc_info.value.non_retryable is True
+
+
+@pytest.mark.asyncio
+async def test_task_memorize_none_required_fields():
+    """Test that None-valued required fields raises non-retryable ApplicationError."""
+    from temporalio.exceptions import ApplicationError
+
+    spec_none = {"task_id": "t1", "resource_url": None, "user_id": "user1"}
+
+    with pytest.raises(ApplicationError, match="resource_url") as exc_info:
+        await task_memorize(spec_none)
+
+    assert exc_info.value.non_retryable is True
+
+
+@pytest.mark.asyncio
 async def test_task_memorize_default_task_id():
     """Test that missing task_id defaults to 'unknown'."""
     mock_service = MagicMock()
