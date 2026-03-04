@@ -181,11 +181,13 @@ async def test_task_memorize_default_agent_id():
 @pytest.mark.asyncio
 async def test_task_memorize_serializes_result():
     """Test that non-serializable results are safely converted."""
-    non_serializable = MagicMock()
-    non_serializable.__str__ = lambda self: "mock-result"
+
+    class NonSerializable:
+        def __str__(self) -> str:
+            return "custom-result"
 
     mock_service = MagicMock()
-    mock_service.memorize = AsyncMock(return_value=non_serializable)
+    mock_service.memorize = AsyncMock(return_value=NonSerializable())
 
     with (
         patch("app.workers.memorize_activity.Settings"),
