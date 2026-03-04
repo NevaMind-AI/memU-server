@@ -6,11 +6,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 from temporalio import activity
+from temporalio.exceptions import ApplicationError
 
 from app.services.memu import create_memory_service
 from config.settings import Settings
 
 logger = logging.getLogger(__name__)
+
+_REQUIRED_FIELDS = ("resource_url", "user_id")
 
 
 @activity.defn(name="task_memorize")
@@ -22,8 +25,19 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
 
     Returns:
         Dict with finished_at timestamp and status.
+
+    Raises:
+        ValueError: If required fields are missing from spec.
+        activity.ApplicationError: If memorization fails.
     """
     task_id = spec.get("task_id", "unknown")
+
+    # Validate required fields up front
+    missing = [f for f in _REQUIRED_FIELDS if f not in spec]
+    if missing:
+        msg = f"Missing required field(s) in spec: {', '.join(missing)}"
+        raise ValueError(msg)
+
     logger.info("Starting memorize activity for task %s", task_id)
 
     try:
@@ -60,12 +74,8 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
 
     except Exception as e:
         logger.exception("Memorize activity failed for task %s: %r", task_id, e)
-        return {
-            "task_id": task_id,
-            "status": "FAILURE",
-            "error": str(e),
-            "finished_at": datetime.now(UTC).isoformat(),
-        }
+        # Raise ApplicationError so Temporal treats this as a failure and applies retry policy
+        raise ApplicationError(f"Memorize activity failed for task {task_id}: {e}") from e
 
 
 def _safe_serialize(obj: Any) -> Any:

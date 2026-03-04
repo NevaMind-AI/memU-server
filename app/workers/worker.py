@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+import os
+import platform
 
 from temporalio.client import Client
 from temporalio.worker import Worker
@@ -13,6 +15,11 @@ from config.settings import Settings
 logger = logging.getLogger(__name__)
 
 TASK_QUEUE = "memu-worker"
+
+
+def _worker_identity() -> str:
+    """Build a unique worker identity from hostname and PID."""
+    return f"{TASK_QUEUE}@{platform.node()}-{os.getpid()}"
 
 
 async def create_temporal_client(settings: Settings) -> Client:
@@ -36,7 +43,7 @@ async def run_worker(client: Client) -> None:
         task_queue=TASK_QUEUE,
         workflows=[MemorizeWorkflow],
         activities=[task_memorize],
-        identity=TASK_QUEUE,
+        identity=_worker_identity(),
     )
 
     logger.info("Starting Temporal worker on task queue: %s", TASK_QUEUE)

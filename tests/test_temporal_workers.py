@@ -7,7 +7,7 @@ import pytest
 
 from app.workers.memorize_activity import _safe_serialize, task_memorize
 from app.workers.memorize_workflow import MemorizeWorkflow
-from app.workers.worker import TASK_QUEUE, create_temporal_client, run_worker
+from app.workers.worker import TASK_QUEUE, _worker_identity, create_temporal_client, run_worker
 
 # ── Activity tests ──
 
@@ -69,20 +69,27 @@ async def test_task_memorize_with_override_config():
 
 @pytest.mark.asyncio
 async def test_task_memorize_failure():
-    """Test memorize activity handles errors gracefully."""
+    """Test memorize activity raises ApplicationError on failure."""
+    from temporalio.exceptions import ApplicationError
+
     mock_service = MagicMock()
     mock_service.memorize = AsyncMock(side_effect=RuntimeError("DB connection failed"))
 
     with (
         patch("app.workers.memorize_activity.Settings"),
         patch("app.workers.memorize_activity.create_memory_service", return_value=mock_service),
+        pytest.raises(ApplicationError, match="DB connection failed"),
     ):
-        result = await task_memorize(SAMPLE_SPEC)
+        await task_memorize(SAMPLE_SPEC)
 
-    assert result["task_id"] == "test-task-001"
-    assert result["status"] == "FAILURE"
-    assert "DB connection failed" in result["error"]
-    assert "finished_at" in result
+
+@pytest.mark.asyncio
+async def test_task_memorize_missing_required_fields():
+    """Test that missing required fields raises ValueError."""
+    spec_missing = {"task_id": "test-001"}  # missing resource_url and user_id
+
+    with pytest.raises(ValueError, match="resource_url"):
+        await task_memorize(spec_missing)
 
 
 @pytest.mark.asyncio
@@ -201,4 +208,4 @@ async def test_run_worker_registers_workflow_and_activities():
     assert call_kwargs["task_queue"] == "memu-worker"
     assert MemorizeWorkflow in call_kwargs["workflows"]
     assert task_memorize in call_kwargs["activities"]
-    assert call_kwargs["identity"] == TASK_QUEUE
+    assert call_kwargs["identity"] == _worker_identity()
