@@ -86,9 +86,11 @@ async def memorize(request: Request, body: MemorizeRequest):
             json.dump(body.conversation, f, ensure_ascii=False)
 
         # 2. Build workflow spec
+        # Pass the filename only; the worker reconstructs the full path
+        # from its own STORAGE_PATH, so it works across containers/hosts.
         spec = {
             "task_id": task_id,
-            "resource_url": str(file_path.resolve()),
+            "resource_url": file_path.name,
             "user_id": body.user_id,
             "agent_id": body.agent_id,
             "override_config": body.override_config,
@@ -107,11 +109,12 @@ async def memorize(request: Request, body: MemorizeRequest):
 
         logger.info("Memorize workflow started: %s", workflow_id)
 
-        return MemorizeResponse(
+        result = MemorizeResponse(
             task_id=workflow_id,
             status="PENDING",
             message=f"Memorization task submitted for user {body.user_id}",
         )
+        return JSONResponse(content={"status": "success", "result": result.model_dump()})
     except Exception as exc:
         # Clean up orphaned conversation file on failure
         if file_path is not None and file_path.exists():
@@ -137,11 +140,12 @@ async def get_memorize_status(request: Request, task_id: str):
         elif status == "FAILED":
             detail = "Task execution failed"
 
-        return TaskStatusResponse(
+        task_status = TaskStatusResponse(
             task_id=task_id,
             status=status,
             detail=detail,
         )
+        return JSONResponse(content={"status": "success", "result": task_status.model_dump()})
     except RPCError as exc:
         if exc.status == RPCStatusCode.NOT_FOUND:
             raise HTTPException(status_code=404, detail=f"Task {task_id} not found") from exc

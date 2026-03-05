@@ -26,7 +26,10 @@ class TaskStatusResponse(BaseModel):
     """Response for task status query."""
 
     task_id: str = Field(..., description="Task ID")
-    status: str = Field(..., description="Task status: PENDING, RUNNING, COMPLETED, FAILED")
+    status: str = Field(
+        ...,
+        description=("Task status: PENDING, RUNNING, COMPLETED, FAILED, UNKNOWN, CANCELED, TERMINATED"),
+    )
     detail: str | None = Field(default=None, description="Status detail or error message")
 
 

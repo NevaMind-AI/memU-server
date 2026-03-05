@@ -3,6 +3,7 @@
 import json
 import logging
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from temporalio import activity
@@ -69,9 +70,17 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
         else:
             service = create_memory_service(settings=settings)
 
+        # Resolve resource_url: if it's a bare filename, reconstruct full
+        # path from this worker's STORAGE_PATH so cross-container deploys work.
+        raw_url = spec["resource_url"]
+        if "/" not in raw_url and "\\" not in raw_url:
+            resource_url = str(Path(settings.STORAGE_PATH).resolve() / raw_url)
+        else:
+            resource_url = raw_url
+
         # Execute memorization
         result = await service.memorize(
-            resource_url=spec["resource_url"],
+            resource_url=resource_url,
             modality="conversation",
             user={
                 "user_id": spec["user_id"],

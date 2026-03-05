@@ -125,9 +125,11 @@ def test_memorize_success(client, mock_temporal):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "PENDING"
-    assert data["task_id"].startswith("memorize-")
-    assert "u1" in data["message"]
+    assert data["status"] == "success"
+    result = data["result"]
+    assert result["status"] == "PENDING"
+    assert result["task_id"].startswith("memorize-")
+    assert "u1" in result["message"]
     mock_temporal.start_workflow.assert_called_once()
 
 
@@ -142,6 +144,18 @@ def test_memorize_with_agent_id(client, mock_temporal):
     call_args = mock_temporal.start_workflow.call_args
     spec = call_args.args[1]
     assert spec["agent_id"] == "a1"
+
+
+def test_memorize_resource_url_is_filename(client, mock_temporal):
+    """Test that resource_url in spec is a filename, not an absolute path."""
+    client.post(
+        "/memorize",
+        json={"conversation": {}, "user_id": "u1"},
+    )
+    spec = mock_temporal.start_workflow.call_args.args[1]
+    resource_url = spec["resource_url"]
+    assert resource_url.startswith("conversation-")
+    assert "/" not in resource_url
 
 
 def test_memorize_with_override_config(client, mock_temporal):
@@ -206,7 +220,7 @@ def test_memorize_workflow_id_format(client, mock_temporal):
         "/memorize",
         json={"conversation": {}, "user_id": "u1"},
     )
-    task_id = response.json()["task_id"]
+    task_id = response.json()["result"]["task_id"]
     assert task_id.startswith("memorize-")
     # The hex portion should be exactly 32 chars (uuid4 hex)
     hex_part = task_id.removeprefix("memorize-")
@@ -225,9 +239,11 @@ def test_status_running(client, mock_temporal):
     response = client.get("/memorize/status/memorize-abc123")
     assert response.status_code == 200
     data = response.json()
-    assert data["task_id"] == "memorize-abc123"
-    assert data["status"] == "RUNNING"
-    assert data["detail"] is None
+    assert data["status"] == "success"
+    result = data["result"]
+    assert result["task_id"] == "memorize-abc123"
+    assert result["status"] == "RUNNING"
+    assert result["detail"] is None
 
 
 def test_status_completed(client, mock_temporal):
@@ -239,9 +255,9 @@ def test_status_completed(client, mock_temporal):
 
     response = client.get("/memorize/status/memorize-abc123")
     assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "COMPLETED"
-    assert data["detail"] == "SUCCESS"
+    result = response.json()["result"]
+    assert result["status"] == "COMPLETED"
+    assert result["detail"] == "SUCCESS"
 
 
 def test_status_failed(client, mock_temporal):
@@ -252,9 +268,9 @@ def test_status_failed(client, mock_temporal):
 
     response = client.get("/memorize/status/memorize-abc123")
     assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "FAILED"
-    assert data["detail"] == "Task execution failed"
+    result = response.json()["result"]
+    assert result["status"] == "FAILED"
+    assert result["detail"] == "Task execution failed"
 
 
 def test_status_not_found(client, mock_temporal):
@@ -308,9 +324,9 @@ def test_status_unknown_when_status_is_none(client, mock_temporal):
 
     response = client.get("/memorize/status/memorize-abc123")
     assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "UNKNOWN"
-    assert data["detail"] is None
+    result = response.json()["result"]
+    assert result["status"] == "UNKNOWN"
+    assert result["detail"] is None
 
 
 def test_status_completed_missing_status_key(client, mock_temporal):
@@ -321,6 +337,6 @@ def test_status_completed_missing_status_key(client, mock_temporal):
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
     response = client.get("/memorize/status/memorize-abc123")
-    data = response.json()
-    assert data["status"] == "COMPLETED"
-    assert data["detail"] == "SUCCESS"
+    result = response.json()["result"]
+    assert result["status"] == "COMPLETED"
+    assert result["detail"] == "SUCCESS"
