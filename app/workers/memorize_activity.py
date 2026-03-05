@@ -3,6 +3,7 @@
 import json
 import logging
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from temporalio import activity
@@ -69,9 +70,22 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
         else:
             service = create_memory_service(settings=settings)
 
+        # Resolve resource_url: expect a bare filename (no directory components).
+        # The worker reconstructs the full path from its own STORAGE_PATH.
+        raw_url = spec["resource_url"]
+        candidate = Path(raw_url)
+        # Reject absolute paths, path traversal, and any directory components.
+        # candidate.name != raw_url catches inputs like "subdir/file.json".
+        if candidate.is_absolute() or ".." in candidate.parts or candidate.name != raw_url:
+            raise ApplicationError(
+                "Invalid resource_url: must be a bare filename without path separators",
+                non_retryable=True,
+            )
+        resource_url = str(Path(settings.STORAGE_PATH).resolve() / candidate.name)
+
         # Execute memorization
         result = await service.memorize(
-            resource_url=spec["resource_url"],
+            resource_url=resource_url,
             modality="conversation",
             user={
                 "user_id": spec["user_id"],

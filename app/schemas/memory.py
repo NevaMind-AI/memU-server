@@ -2,7 +2,35 @@
 
 from pydantic import BaseModel, Field, model_validator
 
-# ── Clear ──
+
+# ── Memorize (async) ──
+class MemorizeRequest(BaseModel):
+    """Request to memorize a conversation."""
+
+    conversation: dict | list = Field(..., description="Conversation data to memorize")
+    user_id: str = Field(..., description="User ID")
+    agent_id: str = Field(default="", description="Agent ID")
+    override_config: dict | None = Field(default=None, description="Override MemU config")
+
+
+class MemorizeResponse(BaseModel):
+    """Response after submitting an async memorize task."""
+
+    task_id: str = Field(..., description="Task ID for tracking (Temporal workflow ID)")
+    status: str = Field(default="PENDING", description="Initial task status")
+    message: str = Field(default="Memorization task submitted", description="Response message")
+
+
+# ── Task Status ──
+class TaskStatusResponse(BaseModel):
+    """Response for task status query."""
+
+    task_id: str = Field(..., description="Task ID")
+    status: str = Field(
+        ...,
+        description=("Task status: PENDING, RUNNING, COMPLETED, FAILED, UNKNOWN, CANCELED, TERMINATED"),
+    )
+    detail: str | None = Field(default=None, description="Status detail or error message")
 
 
 class ClearMemoriesRequest(BaseModel):

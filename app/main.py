@@ -10,6 +10,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from temporalio.client import Client
+from temporalio.service import RPCError, RPCStatusCode
 
 from app.schemas.memory import (
     CategoryObject,
@@ -17,8 +19,13 @@ from app.schemas.memory import (
     ClearMemoriesResponse,
     ListCategoriesRequest,
     ListCategoriesResponse,
+    MemorizeRequest,
+    MemorizeResponse,
+    TaskStatusResponse,
 )
 from app.services.memu import create_memory_service
+from app.workers.memorize_workflow import MemorizeWorkflow
+from app.workers.worker import TASK_QUEUE
 from config.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -38,14 +45,26 @@ if not settings.OPENAI_API_KEY.strip():
 storage_dir = Path(settings.STORAGE_PATH)
 
 
+async def _get_temporal_client(app: FastAPI) -> Client:
+    """Return the cached Temporal client, connecting lazily on first call."""
+    client: Client | None = getattr(app.state, "temporal", None)
+    if client is None:
+        client = await Client.connect(
+            settings.temporal_url,
+            namespace=settings.TEMPORAL_NAMESPACE,
+        )
+        app.state.temporal = client
+        logger.info("Connected to Temporal at %s", settings.temporal_url)
+    return client
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Initialise MemoryService on startup (defers DB connection until the app runs)."""
+    """Initialise MemoryService on startup. Temporal connects lazily on first use."""
     try:
         storage_dir.mkdir(parents=True, exist_ok=True)
         _app.state.service = create_memory_service(settings)
     except Exception as exc:
-        # Log full traceback for operators and wrap in a clearer startup error
         msg = "Failed to initialize MemoryService during application startup"
         logger.exception(msg)
         raise RuntimeError(msg) from exc
@@ -56,17 +75,96 @@ app = FastAPI(title="memU Server", version="0.1.0", lifespan=lifespan)
 
 
 @app.post("/memorize")
-async def memorize(request: Request, payload: dict[str, Any]):
+async def memorize(request: Request, body: MemorizeRequest):
+    """Submit an async memorization task via Temporal workflow."""
+    file_path: Path | None = None
     try:
-        service = request.app.state.service
-        file_path = storage_dir / f"conversation-{uuid.uuid4().hex}.json"
+        # 1. Save conversation to local storage
+        task_id = uuid.uuid4().hex
+        file_path = storage_dir / f"conversation-{task_id}.json"
         with file_path.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False)
+            json.dump(body.conversation, f, ensure_ascii=False)
 
-        result = await service.memorize(resource_url=str(file_path), modality="conversation")
-        return JSONResponse(content={"status": "success", "result": result})
+        # 2. Build workflow spec
+        # Pass the filename only; the worker reconstructs the full path
+        # from its own STORAGE_PATH, so it works across containers/hosts.
+        spec = {
+            "task_id": task_id,
+            "resource_url": file_path.name,
+            "user_id": body.user_id,
+            "agent_id": body.agent_id,
+            "override_config": body.override_config,
+        }
+
+        # 3. Start Temporal workflow
+        temporal = await _get_temporal_client(request.app)
+        workflow_id = f"memorize-{task_id}"
+
+        await temporal.start_workflow(
+            MemorizeWorkflow.run,
+            spec,
+            id=workflow_id,
+            task_queue=TASK_QUEUE,
+        )
+
+        logger.info("Memorize workflow started: %s", workflow_id)
+
+        result = MemorizeResponse(
+            task_id=workflow_id,
+            status="PENDING",
+            message=f"Memorization task submitted for user {body.user_id}",
+        )
+        return JSONResponse(content={"status": "success", "result": result.model_dump()})
     except Exception as exc:
-        logger.exception("Memorize request failed")
+        # Clean up orphaned conversation file on failure
+        if file_path is not None and file_path.exists():
+            try:
+                file_path.unlink(missing_ok=True)
+            except Exception:
+                logger.warning(
+                    "Failed to clean up conversation file %s during error handling",
+                    file_path,
+                    exc_info=True,
+                )
+        logger.exception("Failed to submit memorize task")
+        raise HTTPException(status_code=500, detail="Failed to submit memorization task") from exc
+
+
+@app.get("/memorize/status/{task_id}")
+async def get_memorize_status(request: Request, task_id: str):
+    """Get the status of a memorization task."""
+    try:
+        temporal = await _get_temporal_client(request.app)
+        handle = temporal.get_workflow_handle(task_id)
+
+        describe = await handle.describe()
+        status = describe.status.name if describe.status else "UNKNOWN"
+
+        detail = None
+        if status == "COMPLETED":
+            result = await handle.result()
+            if isinstance(result, dict):
+                detail = result.get("status", "SUCCESS")
+            elif result is not None:
+                detail = str(result)
+            else:
+                detail = "SUCCESS"
+        elif status == "FAILED":
+            detail = "Task execution failed"
+
+        task_status = TaskStatusResponse(
+            task_id=task_id,
+            status=status,
+            detail=detail,
+        )
+        return JSONResponse(content={"status": "success", "result": task_status.model_dump()})
+    except RPCError as exc:
+        if exc.status == RPCStatusCode.NOT_FOUND:
+            raise HTTPException(status_code=404, detail=f"Task {task_id} not found") from exc
+        logger.exception("Temporal RPC error for task %s", task_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+    except Exception as exc:
+        logger.exception("Failed to get task status for %s", task_id)
         raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
