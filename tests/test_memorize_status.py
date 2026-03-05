@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app.schemas.memory import MemorizeRequest, MemorizeResponse, TaskStatusResponse
 
@@ -33,11 +34,11 @@ class TestMemorizeRequestSchema:
         assert req.override_config == {"key": "val"}
 
     def test_missing_conversation_raises(self):
-        with pytest.raises(Exception):  # noqa: B017, PT011
+        with pytest.raises(ValidationError, match="conversation"):
             MemorizeRequest(user_id="u1")
 
     def test_missing_user_id_raises(self):
-        with pytest.raises(Exception):  # noqa: B017, PT011
+        with pytest.raises(ValidationError, match="user_id"):
             MemorizeRequest(conversation={})
 
 
@@ -105,10 +106,11 @@ def client(mock_service, mock_temporal, tmp_path):
 
     with (
         patch("app.main.create_memory_service", return_value=mock_service),
-        patch("app.main.Client.connect", new_callable=AsyncMock, return_value=mock_temporal),
         patch("app.main.storage_dir", tmp_path),
     ):
         with TestClient(app) as test_client:
+            # Pre-set mock Temporal client so lazy connect is bypassed
+            test_client.app.state.temporal = mock_temporal
             yield test_client
 
 

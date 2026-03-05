@@ -41,6 +41,8 @@ def client(mock_service):
     # Patch create_memory_service so lifespan doesn't connect to a real DB
     with patch("app.main.create_memory_service", return_value=mock_service):
         with TestClient(app) as test_client:
+            # Temporal connects lazily; pre-set a mock so endpoints don't call real Temporal
+            test_client.app.state.temporal = MagicMock()
             yield test_client
 
 

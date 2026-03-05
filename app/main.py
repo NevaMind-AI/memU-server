@@ -45,21 +45,27 @@ if not settings.OPENAI_API_KEY.strip():
 storage_dir = Path(settings.STORAGE_PATH)
 
 
-@asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Initialise MemoryService and Temporal client on startup."""
-    try:
-        storage_dir.mkdir(parents=True, exist_ok=True)
-        _app.state.service = create_memory_service(settings)
-
-        # Connect to Temporal
-        _app.state.temporal = await Client.connect(
+async def _get_temporal_client(app: FastAPI) -> Client:
+    """Return the cached Temporal client, connecting lazily on first call."""
+    client: Client | None = getattr(app.state, "temporal", None)
+    if client is None:
+        client = await Client.connect(
             settings.temporal_url,
             namespace=settings.TEMPORAL_NAMESPACE,
         )
+        app.state.temporal = client
         logger.info("Connected to Temporal at %s", settings.temporal_url)
+    return client
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Initialise MemoryService on startup. Temporal connects lazily on first use."""
+    try:
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        _app.state.service = create_memory_service(settings)
     except Exception as exc:
-        msg = "Failed to initialize application during startup"
+        msg = "Failed to initialize MemoryService during application startup"
         logger.exception(msg)
         raise RuntimeError(msg) from exc
     yield
@@ -82,14 +88,14 @@ async def memorize(request: Request, body: MemorizeRequest):
         # 2. Build workflow spec
         spec = {
             "task_id": task_id,
-            "resource_url": str(file_path),
+            "resource_url": str(file_path.resolve()),
             "user_id": body.user_id,
             "agent_id": body.agent_id,
             "override_config": body.override_config,
         }
 
         # 3. Start Temporal workflow
-        temporal: Client = request.app.state.temporal
+        temporal = await _get_temporal_client(request.app)
         workflow_id = f"memorize-{task_id}"
 
         await temporal.start_workflow(
@@ -118,7 +124,7 @@ async def memorize(request: Request, body: MemorizeRequest):
 async def get_memorize_status(request: Request, task_id: str):
     """Get the status of a memorization task."""
     try:
-        temporal: Client = request.app.state.temporal
+        temporal = await _get_temporal_client(request.app)
         handle = temporal.get_workflow_handle(task_id)
 
         describe = await handle.describe()
