@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from temporalio.client import Client
+from temporalio.service import RPCError, RPCStatusCode
 
 from app.schemas.memory import (
     CategoryObject,
@@ -54,7 +55,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # Connect to Temporal
         _app.state.temporal = await Client.connect(
             settings.temporal_url,
-            namespace="default",
+            namespace=settings.TEMPORAL_NAMESPACE,
         )
         logger.info("Connected to Temporal at %s", settings.temporal_url)
     except Exception as exc:
@@ -70,6 +71,7 @@ app = FastAPI(title="memU Server", version="0.1.0", lifespan=lifespan)
 @app.post("/memorize")
 async def memorize(request: Request, body: MemorizeRequest):
     """Submit an async memorization task via Temporal workflow."""
+    file_path: Path | None = None
     try:
         # 1. Save conversation to local storage
         task_id = uuid.uuid4().hex
@@ -105,6 +107,9 @@ async def memorize(request: Request, body: MemorizeRequest):
             message=f"Memorization task submitted for user {body.user_id}",
         )
     except Exception as exc:
+        # Clean up orphaned conversation file on failure
+        if file_path is not None and file_path.exists():
+            file_path.unlink(missing_ok=True)
         logger.exception("Failed to submit memorize task")
         raise HTTPException(status_code=500, detail="Failed to submit memorization task") from exc
 
@@ -117,7 +122,7 @@ async def get_memorize_status(request: Request, task_id: str):
         handle = temporal.get_workflow_handle(task_id)
 
         describe = await handle.describe()
-        status = describe.status.name  # RUNNING, COMPLETED, FAILED, etc.
+        status = describe.status.name if describe.status else "UNKNOWN"
 
         detail = None
         if status == "COMPLETED":
@@ -131,9 +136,14 @@ async def get_memorize_status(request: Request, task_id: str):
             status=status,
             detail=detail,
         )
+    except RPCError as exc:
+        if exc.status == RPCStatusCode.NOT_FOUND:
+            raise HTTPException(status_code=404, detail=f"Task {task_id} not found") from exc
+        logger.exception("Temporal RPC error for task %s", task_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
     except Exception as exc:
         logger.exception("Failed to get task status for %s", task_id)
-        raise HTTPException(status_code=404, detail=f"Task {task_id} not found") from exc
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @app.post("/retrieve")

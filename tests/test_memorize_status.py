@@ -99,13 +99,14 @@ def mock_service():
 
 
 @pytest.fixture
-def client(mock_service, mock_temporal):
+def client(mock_service, mock_temporal, tmp_path):
     """Create FastAPI test client with mocked service and Temporal."""
     from app.main import app
 
     with (
         patch("app.main.create_memory_service", return_value=mock_service),
         patch("app.main.Client.connect", new_callable=AsyncMock, return_value=mock_temporal),
+        patch("app.main.storage_dir", tmp_path),
     ):
         with TestClient(app) as test_client:
             yield test_client
@@ -154,13 +155,12 @@ def test_memorize_with_override_config(client, mock_temporal):
 
 def test_memorize_saves_conversation_file(client, tmp_path):
     """Test that /memorize saves conversation to a JSON file."""
-    with patch("app.main.storage_dir", tmp_path):
-        response = client.post(
-            "/memorize",
-            json={"conversation": {"msg": "hello"}, "user_id": "u1"},
-        )
+    response = client.post(
+        "/memorize",
+        json={"conversation": {"msg": "hello"}, "user_id": "u1"},
+    )
     assert response.status_code == 200
-    # A conversation file should have been created
+    # A conversation file should have been created under the patched storage_dir
     files = list(tmp_path.glob("conversation-*.json"))
     assert len(files) == 1
 
@@ -177,8 +177,8 @@ def test_memorize_missing_conversation(client):
     assert response.status_code == 422
 
 
-def test_memorize_temporal_error(client, mock_temporal):
-    """Test that Temporal failure returns 500."""
+def test_memorize_temporal_error(client, mock_temporal, tmp_path):
+    """Test that Temporal failure returns 500 and cleans up orphaned file."""
     mock_temporal.start_workflow = AsyncMock(side_effect=Exception("connection refused"))
     response = client.post(
         "/memorize",
@@ -186,6 +186,9 @@ def test_memorize_temporal_error(client, mock_temporal):
     )
     assert response.status_code == 500
     assert "Failed to submit" in response.json()["detail"]
+    # Orphaned conversation file should be cleaned up
+    files = list(tmp_path.glob("conversation-*.json"))
+    assert len(files) == 0
 
 
 def test_memorize_uses_correct_task_queue(client, mock_temporal):
@@ -253,14 +256,59 @@ def test_status_failed(client, mock_temporal):
 
 
 def test_status_not_found(client, mock_temporal):
-    """Test 404 when workflow does not exist."""
+    """Test 404 when workflow does not exist (RPCError NOT_FOUND)."""
+    from temporalio.service import RPCError, RPCStatusCode
+
     handle = MagicMock()
-    handle.describe = AsyncMock(side_effect=Exception("workflow not found"))
+    handle.describe = AsyncMock(
+        side_effect=RPCError("workflow not found", RPCStatusCode.NOT_FOUND, b""),
+    )
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
     response = client.get("/memorize/status/memorize-nonexistent")
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
+
+
+def test_status_rpc_error_returns_500(client, mock_temporal):
+    """Test that non-NOT_FOUND RPCError returns 500."""
+    from temporalio.service import RPCError, RPCStatusCode
+
+    handle = MagicMock()
+    handle.describe = AsyncMock(
+        side_effect=RPCError("unavailable", RPCStatusCode.UNAVAILABLE, b""),
+    )
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Internal server error"
+
+
+def test_status_unexpected_error_returns_500(client, mock_temporal):
+    """Test that unexpected exceptions return 500."""
+    handle = MagicMock()
+    handle.describe = AsyncMock(side_effect=RuntimeError("unexpected"))
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Internal server error"
+
+
+def test_status_unknown_when_status_is_none(client, mock_temporal):
+    """Test UNKNOWN is returned when describe().status is None."""
+    handle = MagicMock()
+    desc = MagicMock()
+    desc.status = None
+    handle.describe = AsyncMock(return_value=desc)
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "UNKNOWN"
+    assert data["detail"] is None
 
 
 def test_status_completed_missing_status_key(client, mock_temporal):
