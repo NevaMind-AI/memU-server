@@ -118,7 +118,14 @@ async def memorize(request: Request, body: MemorizeRequest):
     except Exception as exc:
         # Clean up orphaned conversation file on failure
         if file_path is not None and file_path.exists():
-            file_path.unlink(missing_ok=True)
+            try:
+                file_path.unlink(missing_ok=True)
+            except Exception:
+                logger.warning(
+                    "Failed to clean up conversation file %s during error handling",
+                    file_path,
+                    exc_info=True,
+                )
         logger.exception("Failed to submit memorize task")
         raise HTTPException(status_code=500, detail="Failed to submit memorization task") from exc
 

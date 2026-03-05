@@ -70,14 +70,15 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
         else:
             service = create_memory_service(settings=settings)
 
-        # Resolve resource_url: if it's a bare filename, reconstruct full
-        # path from this worker's STORAGE_PATH so cross-container deploys work.
+        # Resolve resource_url: expect a bare filename (no directory components).
+        # The worker reconstructs the full path from its own STORAGE_PATH.
         raw_url = spec["resource_url"]
         candidate = Path(raw_url)
-        # Validate that the filename is safe: not absolute and no path traversal
-        if candidate.is_absolute() or ".." in candidate.parts:
+        # Reject absolute paths, path traversal, and any directory components.
+        # candidate.name != raw_url catches inputs like "subdir/file.json".
+        if candidate.is_absolute() or ".." in candidate.parts or candidate.name != raw_url:
             raise ApplicationError(
-                "Invalid resource_url: unsafe filename",
+                "Invalid resource_url: must be a bare filename without path separators",
                 non_retryable=True,
             )
         resource_url = str(Path(settings.STORAGE_PATH).resolve() / candidate.name)

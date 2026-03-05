@@ -26,8 +26,11 @@ async def test_task_memorize_success():
     mock_service = MagicMock()
     mock_service.memorize = AsyncMock(return_value={"memories_created": 3})
 
+    mock_settings = MagicMock()
+    mock_settings.STORAGE_PATH = "/data/storage"
+
     with (
-        patch("app.workers.memorize_activity.Settings"),
+        patch("app.workers.memorize_activity.Settings", return_value=mock_settings),
         patch("app.workers.memorize_activity.create_memory_service", return_value=mock_service),
     ):
         result = await task_memorize(SAMPLE_SPEC)
@@ -50,6 +53,7 @@ async def test_task_memorize_with_override_config():
     mock_service = MagicMock()
     mock_service.memorize = AsyncMock(return_value={})
     mock_settings = MagicMock()
+    mock_settings.STORAGE_PATH = "/data/storage"
 
     spec_with_override = {
         **SAMPLE_SPEC,
@@ -77,7 +81,7 @@ async def test_task_memorize_failure():
     mock_service.memorize = AsyncMock(side_effect=RuntimeError("DB connection failed"))
 
     with (
-        patch("app.workers.memorize_activity.Settings"),
+        patch("app.workers.memorize_activity.Settings", return_value=MagicMock(STORAGE_PATH="/data/storage")),
         patch("app.workers.memorize_activity.create_memory_service", return_value=mock_service),
         pytest.raises(ApplicationError, match="Memorize activity failed for task"),
     ):
@@ -136,15 +140,15 @@ async def test_task_memorize_non_dict_spec():
 
 @pytest.mark.asyncio
 async def test_task_memorize_path_traversal_rejected():
-    """Test that absolute paths and '..' in resource_url are rejected."""
+    """Test that absolute paths, '..', and directory components in resource_url are rejected."""
     from temporalio.exceptions import ApplicationError
 
-    for bad_url in ["/etc/passwd", "../secret.json", "foo/../../etc/passwd"]:
+    for bad_url in ["/etc/passwd", "../secret.json", "foo/../../etc/passwd", "subdir/file.json"]:
         spec = {**SAMPLE_SPEC, "resource_url": bad_url}
         with (
             patch("app.workers.memorize_activity.Settings"),
             patch("app.workers.memorize_activity.create_memory_service"),
-            pytest.raises(ApplicationError, match="unsafe filename") as exc_info,
+            pytest.raises(ApplicationError, match="bare filename without path separators") as exc_info,
         ):
             await task_memorize(spec)
         assert exc_info.value.non_retryable is True
@@ -175,7 +179,7 @@ async def test_task_memorize_default_task_id():
     spec_no_id = {k: v for k, v in SAMPLE_SPEC.items() if k != "task_id"}
 
     with (
-        patch("app.workers.memorize_activity.Settings"),
+        patch("app.workers.memorize_activity.Settings", return_value=MagicMock(STORAGE_PATH="/data/storage")),
         patch("app.workers.memorize_activity.create_memory_service", return_value=mock_service),
     ):
         result = await task_memorize(spec_no_id)
@@ -193,7 +197,7 @@ async def test_task_memorize_default_agent_id():
     spec_no_agent = {k: v for k, v in SAMPLE_SPEC.items() if k != "agent_id"}
 
     with (
-        patch("app.workers.memorize_activity.Settings"),
+        patch("app.workers.memorize_activity.Settings", return_value=MagicMock(STORAGE_PATH="/data/storage")),
         patch("app.workers.memorize_activity.create_memory_service", return_value=mock_service),
     ):
         await task_memorize(spec_no_agent)
@@ -218,7 +222,7 @@ async def test_task_memorize_serializes_result():
     mock_service.memorize = AsyncMock(return_value=NonSerializable())
 
     with (
-        patch("app.workers.memorize_activity.Settings"),
+        patch("app.workers.memorize_activity.Settings", return_value=MagicMock(STORAGE_PATH="/data/storage")),
         patch("app.workers.memorize_activity.create_memory_service", return_value=mock_service),
     ):
         result = await task_memorize(SAMPLE_SPEC)
@@ -234,7 +238,7 @@ async def test_task_memorize_passes_serializable_result():
     mock_service.memorize = AsyncMock(return_value={"count": 5})
 
     with (
-        patch("app.workers.memorize_activity.Settings"),
+        patch("app.workers.memorize_activity.Settings", return_value=MagicMock(STORAGE_PATH="/data/storage")),
         patch("app.workers.memorize_activity.create_memory_service", return_value=mock_service),
     ):
         result = await task_memorize(SAMPLE_SPEC)
