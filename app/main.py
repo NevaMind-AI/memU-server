@@ -143,7 +143,12 @@ async def get_memorize_status(request: Request, task_id: str):
         detail = None
         if status == "COMPLETED":
             result = await handle.result()
-            detail = result.get("status", "SUCCESS")
+            if isinstance(result, dict):
+                detail = result.get("status", "SUCCESS")
+            elif result is not None:
+                detail = str(result)
+            else:
+                detail = "SUCCESS"
         elif status == "FAILED":
             detail = "Task execution failed"
 

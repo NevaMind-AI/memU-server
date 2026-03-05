@@ -209,9 +209,11 @@ def test_memorize_temporal_error(client, mock_temporal, tmp_path):
 
 def test_memorize_uses_correct_task_queue(client, mock_temporal):
     """Test that workflow is started on the memu-worker task queue."""
+    from app.workers.worker import TASK_QUEUE
+
     client.post("/memorize", json={"conversation": {}, "user_id": "u1"})
     call_kwargs = mock_temporal.start_workflow.call_args.kwargs
-    assert call_kwargs["task_queue"] == "memu-worker"
+    assert call_kwargs["task_queue"] == TASK_QUEUE
 
 
 def test_memorize_workflow_id_format(client, mock_temporal):

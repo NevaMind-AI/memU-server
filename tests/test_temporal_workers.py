@@ -42,7 +42,8 @@ async def test_task_memorize_success():
     mock_service.memorize.assert_called_once()
     call_kwargs = mock_service.memorize.call_args[1]
     # resource_url should be reconstructed as an absolute path under STORAGE_PATH
-    assert call_kwargs["resource_url"].endswith("conversation-abc123.json")
+    assert str(call_kwargs["resource_url"]).startswith(str(mock_settings.STORAGE_PATH))
+    assert str(call_kwargs["resource_url"]).endswith("conversation-abc123.json")
     assert call_kwargs["modality"] == "conversation"
     assert call_kwargs["user"] == {"user_id": "user123", "agent_id": "agent456"}
 
