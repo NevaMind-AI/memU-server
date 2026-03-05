@@ -14,7 +14,7 @@ from app.workers.worker import TASK_QUEUE, create_temporal_client, run_worker
 
 SAMPLE_SPEC = {
     "task_id": "test-task-001",
-    "resource_url": "/data/storage/conversation-abc123.json",
+    "resource_url": "conversation-abc123.json",
     "user_id": "user123",
     "agent_id": "agent456",
 }
@@ -36,11 +36,12 @@ async def test_task_memorize_success():
     assert result["status"] == "SUCCESS"
     assert "finished_at" in result
     assert result["result"] == {"memories_created": 3}
-    mock_service.memorize.assert_called_once_with(
-        resource_url="/data/storage/conversation-abc123.json",
-        modality="conversation",
-        user={"user_id": "user123", "agent_id": "agent456"},
-    )
+    mock_service.memorize.assert_called_once()
+    call_kwargs = mock_service.memorize.call_args[1]
+    # resource_url should be reconstructed as an absolute path under STORAGE_PATH
+    assert call_kwargs["resource_url"].endswith("conversation-abc123.json")
+    assert call_kwargs["modality"] == "conversation"
+    assert call_kwargs["user"] == {"user_id": "user123", "agent_id": "agent456"}
 
 
 @pytest.mark.asyncio
@@ -131,6 +132,22 @@ async def test_task_memorize_non_dict_spec():
         await task_memorize(None)
 
     assert exc_info.value.non_retryable is True
+
+
+@pytest.mark.asyncio
+async def test_task_memorize_path_traversal_rejected():
+    """Test that absolute paths and '..' in resource_url are rejected."""
+    from temporalio.exceptions import ApplicationError
+
+    for bad_url in ["/etc/passwd", "../secret.json", "foo/../../etc/passwd"]:
+        spec = {**SAMPLE_SPEC, "resource_url": bad_url}
+        with (
+            patch("app.workers.memorize_activity.Settings"),
+            patch("app.workers.memorize_activity.create_memory_service"),
+            pytest.raises(ApplicationError, match="unsafe filename") as exc_info,
+        ):
+            await task_memorize(spec)
+        assert exc_info.value.non_retryable is True
 
 
 @pytest.mark.asyncio

@@ -73,10 +73,14 @@ async def task_memorize(spec: dict) -> dict[str, Any]:
         # Resolve resource_url: if it's a bare filename, reconstruct full
         # path from this worker's STORAGE_PATH so cross-container deploys work.
         raw_url = spec["resource_url"]
-        if "/" not in raw_url and "\\" not in raw_url:
-            resource_url = str(Path(settings.STORAGE_PATH).resolve() / raw_url)
-        else:
-            resource_url = raw_url
+        candidate = Path(raw_url)
+        # Validate that the filename is safe: not absolute and no path traversal
+        if candidate.is_absolute() or ".." in candidate.parts:
+            raise ApplicationError(
+                "Invalid resource_url: unsafe filename",
+                non_retryable=True,
+            )
+        resource_url = str(Path(settings.STORAGE_PATH).resolve() / candidate.name)
 
         # Execute memorization
         result = await service.memorize(
