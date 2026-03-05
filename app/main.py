@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from temporalio.client import Client
 
 from app.schemas.memory import (
     CategoryObject,
@@ -17,8 +18,13 @@ from app.schemas.memory import (
     ClearMemoriesResponse,
     ListCategoriesRequest,
     ListCategoriesResponse,
+    MemorizeRequest,
+    MemorizeResponse,
+    TaskStatusResponse,
 )
 from app.services.memu import create_memory_service
+from app.workers.memorize_workflow import MemorizeWorkflow
+from app.workers.worker import TASK_QUEUE
 from config.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -40,13 +46,19 @@ storage_dir = Path(settings.STORAGE_PATH)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Initialise MemoryService on startup (defers DB connection until the app runs)."""
+    """Initialise MemoryService and Temporal client on startup."""
     try:
         storage_dir.mkdir(parents=True, exist_ok=True)
         _app.state.service = create_memory_service(settings)
+
+        # Connect to Temporal
+        _app.state.temporal = await Client.connect(
+            settings.temporal_url,
+            namespace="default",
+        )
+        logger.info("Connected to Temporal at %s", settings.temporal_url)
     except Exception as exc:
-        # Log full traceback for operators and wrap in a clearer startup error
-        msg = "Failed to initialize MemoryService during application startup"
+        msg = "Failed to initialize application during startup"
         logger.exception(msg)
         raise RuntimeError(msg) from exc
     yield
@@ -56,18 +68,72 @@ app = FastAPI(title="memU Server", version="0.1.0", lifespan=lifespan)
 
 
 @app.post("/memorize")
-async def memorize(request: Request, payload: dict[str, Any]):
+async def memorize(request: Request, body: MemorizeRequest):
+    """Submit an async memorization task via Temporal workflow."""
     try:
-        service = request.app.state.service
-        file_path = storage_dir / f"conversation-{uuid.uuid4().hex}.json"
+        # 1. Save conversation to local storage
+        task_id = uuid.uuid4().hex
+        file_path = storage_dir / f"conversation-{task_id}.json"
         with file_path.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False)
+            json.dump(body.conversation, f, ensure_ascii=False)
 
-        result = await service.memorize(resource_url=str(file_path), modality="conversation")
-        return JSONResponse(content={"status": "success", "result": result})
+        # 2. Build workflow spec
+        spec = {
+            "task_id": task_id,
+            "resource_url": str(file_path),
+            "user_id": body.user_id,
+            "agent_id": body.agent_id,
+            "override_config": body.override_config,
+        }
+
+        # 3. Start Temporal workflow
+        temporal: Client = request.app.state.temporal
+        workflow_id = f"memorize-{task_id}"
+
+        await temporal.start_workflow(
+            MemorizeWorkflow.run,
+            spec,
+            id=workflow_id,
+            task_queue=TASK_QUEUE,
+        )
+
+        logger.info("Memorize workflow started: %s", workflow_id)
+
+        return MemorizeResponse(
+            task_id=workflow_id,
+            status="PENDING",
+            message=f"Memorization task submitted for user {body.user_id}",
+        )
     except Exception as exc:
-        logger.exception("Memorize request failed")
-        raise HTTPException(status_code=500, detail="Internal server error") from exc
+        logger.exception("Failed to submit memorize task")
+        raise HTTPException(status_code=500, detail="Failed to submit memorization task") from exc
+
+
+@app.get("/memorize/status/{task_id}")
+async def get_memorize_status(request: Request, task_id: str):
+    """Get the status of a memorization task."""
+    try:
+        temporal: Client = request.app.state.temporal
+        handle = temporal.get_workflow_handle(task_id)
+
+        describe = await handle.describe()
+        status = describe.status.name  # RUNNING, COMPLETED, FAILED, etc.
+
+        detail = None
+        if status == "COMPLETED":
+            result = await handle.result()
+            detail = result.get("status", "SUCCESS")
+        elif status == "FAILED":
+            detail = "Task execution failed"
+
+        return TaskStatusResponse(
+            task_id=task_id,
+            status=status,
+            detail=detail,
+        )
+    except Exception as exc:
+        logger.exception("Failed to get task status for %s", task_id)
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found") from exc
 
 
 @app.post("/retrieve")

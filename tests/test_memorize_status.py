@@ -1,0 +1,276 @@
+"""Tests for /memorize and /memorize/status/{task_id} endpoints and related schemas."""
+
+from enum import Enum
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.schemas.memory import MemorizeRequest, MemorizeResponse, TaskStatusResponse
+
+# ── Schema unit tests ──
+
+
+class TestMemorizeRequestSchema:
+    """Tests for MemorizeRequest Pydantic model."""
+
+    def test_valid_request_with_dict_conversation(self):
+        req = MemorizeRequest(conversation={"role": "user", "content": "hi"}, user_id="u1")
+        assert req.user_id == "u1"
+        assert req.agent_id == ""
+        assert req.override_config is None
+
+    def test_valid_request_with_list_conversation(self):
+        req = MemorizeRequest(conversation=[{"role": "user", "content": "hi"}], user_id="u1")
+        assert isinstance(req.conversation, list)
+
+    def test_agent_id_default_empty_string(self):
+        req = MemorizeRequest(conversation={}, user_id="u1")
+        assert req.agent_id == ""
+
+    def test_override_config_accepted(self):
+        req = MemorizeRequest(conversation={}, user_id="u1", override_config={"key": "val"})
+        assert req.override_config == {"key": "val"}
+
+    def test_missing_conversation_raises(self):
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            MemorizeRequest(user_id="u1")
+
+    def test_missing_user_id_raises(self):
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            MemorizeRequest(conversation={})
+
+
+class TestMemorizeResponseSchema:
+    """Tests for MemorizeResponse Pydantic model."""
+
+    def test_defaults(self):
+        resp = MemorizeResponse(task_id="wf-123")
+        assert resp.status == "PENDING"
+        assert resp.message == "Memorization task submitted"
+
+    def test_custom_values(self):
+        resp = MemorizeResponse(task_id="wf-1", status="RUNNING", message="custom")
+        assert resp.status == "RUNNING"
+        assert resp.message == "custom"
+
+
+class TestTaskStatusResponseSchema:
+    """Tests for TaskStatusResponse Pydantic model."""
+
+    def test_defaults(self):
+        resp = TaskStatusResponse(task_id="wf-1", status="RUNNING")
+        assert resp.detail is None
+
+    def test_with_detail(self):
+        resp = TaskStatusResponse(task_id="wf-1", status="FAILED", detail="timeout")
+        assert resp.detail == "timeout"
+
+
+# ── Endpoint tests ──
+
+
+# Helpers to simulate Temporal workflow status enum values
+class _FakeStatus(Enum):
+    RUNNING = 1
+    COMPLETED = 2
+    FAILED = 3
+
+
+def _make_workflow_description(status_name: str):
+    """Build a fake describe() result with a .status.name attribute."""
+    desc = MagicMock()
+    desc.status = getattr(_FakeStatus, status_name)
+    return desc
+
+
+@pytest.fixture
+def mock_temporal():
+    """Create a mock Temporal client."""
+    temporal = MagicMock()
+    temporal.start_workflow = AsyncMock(return_value=None)
+    return temporal
+
+
+@pytest.fixture
+def mock_service():
+    """Create a mock MemoryService (needed by lifespan)."""
+    return MagicMock()
+
+
+@pytest.fixture
+def client(mock_service, mock_temporal):
+    """Create FastAPI test client with mocked service and Temporal."""
+    from app.main import app
+
+    with (
+        patch("app.main.create_memory_service", return_value=mock_service),
+        patch("app.main.Client.connect", new_callable=AsyncMock, return_value=mock_temporal),
+    ):
+        with TestClient(app) as test_client:
+            yield test_client
+
+
+# ── POST /memorize ──
+
+
+def test_memorize_success(client, mock_temporal):
+    """Test successful memorize submission returns PENDING status."""
+    response = client.post(
+        "/memorize",
+        json={"conversation": {"role": "user"}, "user_id": "u1"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "PENDING"
+    assert data["task_id"].startswith("memorize-")
+    assert "u1" in data["message"]
+    mock_temporal.start_workflow.assert_called_once()
+
+
+def test_memorize_with_agent_id(client, mock_temporal):
+    """Test memorize includes agent_id in workflow spec."""
+    response = client.post(
+        "/memorize",
+        json={"conversation": {}, "user_id": "u1", "agent_id": "a1"},
+    )
+    assert response.status_code == 200
+    # Verify the spec passed to start_workflow contains agent_id
+    call_args = mock_temporal.start_workflow.call_args
+    spec = call_args.args[1]
+    assert spec["agent_id"] == "a1"
+
+
+def test_memorize_with_override_config(client, mock_temporal):
+    """Test memorize passes override_config in workflow spec."""
+    response = client.post(
+        "/memorize",
+        json={"conversation": {}, "user_id": "u1", "override_config": {"k": "v"}},
+    )
+    assert response.status_code == 200
+    spec = mock_temporal.start_workflow.call_args.args[1]
+    assert spec["override_config"] == {"k": "v"}
+
+
+def test_memorize_saves_conversation_file(client, tmp_path):
+    """Test that /memorize saves conversation to a JSON file."""
+    with patch("app.main.storage_dir", tmp_path):
+        response = client.post(
+            "/memorize",
+            json={"conversation": {"msg": "hello"}, "user_id": "u1"},
+        )
+    assert response.status_code == 200
+    # A conversation file should have been created
+    files = list(tmp_path.glob("conversation-*.json"))
+    assert len(files) == 1
+
+
+def test_memorize_missing_user_id(client):
+    """Test that missing user_id returns 422."""
+    response = client.post("/memorize", json={"conversation": {}})
+    assert response.status_code == 422
+
+
+def test_memorize_missing_conversation(client):
+    """Test that missing conversation returns 422."""
+    response = client.post("/memorize", json={"user_id": "u1"})
+    assert response.status_code == 422
+
+
+def test_memorize_temporal_error(client, mock_temporal):
+    """Test that Temporal failure returns 500."""
+    mock_temporal.start_workflow = AsyncMock(side_effect=Exception("connection refused"))
+    response = client.post(
+        "/memorize",
+        json={"conversation": {}, "user_id": "u1"},
+    )
+    assert response.status_code == 500
+    assert "Failed to submit" in response.json()["detail"]
+
+
+def test_memorize_uses_correct_task_queue(client, mock_temporal):
+    """Test that workflow is started on the memu-worker task queue."""
+    client.post("/memorize", json={"conversation": {}, "user_id": "u1"})
+    call_kwargs = mock_temporal.start_workflow.call_args.kwargs
+    assert call_kwargs["task_queue"] == "memu-worker"
+
+
+def test_memorize_workflow_id_format(client, mock_temporal):
+    """Test workflow_id is 'memorize-<hex>'."""
+    response = client.post(
+        "/memorize",
+        json={"conversation": {}, "user_id": "u1"},
+    )
+    task_id = response.json()["task_id"]
+    assert task_id.startswith("memorize-")
+    # The hex portion should be exactly 32 chars (uuid4 hex)
+    hex_part = task_id.removeprefix("memorize-")
+    assert len(hex_part) == 32
+
+
+# ── GET /memorize/status/{task_id} ──
+
+
+def test_status_running(client, mock_temporal):
+    """Test status endpoint returns RUNNING for an active workflow."""
+    handle = MagicMock()
+    handle.describe = AsyncMock(return_value=_make_workflow_description("RUNNING"))
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["task_id"] == "memorize-abc123"
+    assert data["status"] == "RUNNING"
+    assert data["detail"] is None
+
+
+def test_status_completed(client, mock_temporal):
+    """Test status endpoint returns COMPLETED with detail."""
+    handle = MagicMock()
+    handle.describe = AsyncMock(return_value=_make_workflow_description("COMPLETED"))
+    handle.result = AsyncMock(return_value={"status": "SUCCESS", "finished_at": "2025-03-06T00:00:00"})
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "COMPLETED"
+    assert data["detail"] == "SUCCESS"
+
+
+def test_status_failed(client, mock_temporal):
+    """Test status endpoint returns FAILED with detail message."""
+    handle = MagicMock()
+    handle.describe = AsyncMock(return_value=_make_workflow_description("FAILED"))
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "FAILED"
+    assert data["detail"] == "Task execution failed"
+
+
+def test_status_not_found(client, mock_temporal):
+    """Test 404 when workflow does not exist."""
+    handle = MagicMock()
+    handle.describe = AsyncMock(side_effect=Exception("workflow not found"))
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-nonexistent")
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"]
+
+
+def test_status_completed_missing_status_key(client, mock_temporal):
+    """Test COMPLETED workflow where result dict lacks 'status' key falls back to 'SUCCESS'."""
+    handle = MagicMock()
+    handle.describe = AsyncMock(return_value=_make_workflow_description("COMPLETED"))
+    handle.result = AsyncMock(return_value={"task_id": "t1"})
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    data = response.json()
+    assert data["status"] == "COMPLETED"
+    assert data["detail"] == "SUCCESS"
