@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, cast
 
-import anyio
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from temporalio.client import Client
@@ -96,7 +95,7 @@ async def memorize(request: Request, body: MemorizeRequest):
         task_id = uuid.uuid4().hex
         file_path = storage_dir / f"conversation-{task_id}.json"
         data = json.dumps(body.conversation, ensure_ascii=False)
-        await anyio.to_thread.run_sync(file_path.write_text, data, "utf-8")
+        await asyncio.to_thread(file_path.write_text, data, "utf-8")
 
         # 2. Build workflow spec
         # Pass the filename only; the worker reconstructs the full path
