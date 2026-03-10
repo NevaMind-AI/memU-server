@@ -87,10 +87,8 @@ def _make_workflow_description(status_name: str):
 
 @pytest.fixture
 def mock_temporal():
-    """Create a mock Temporal client that passes isinstance(_, Client) checks."""
-    from temporalio.client import Client
-
-    temporal = MagicMock(spec=Client)
+    """Create a mock Temporal client for endpoint tests."""
+    temporal = MagicMock()
     temporal.start_workflow = AsyncMock(return_value=None)
     return temporal
 
@@ -338,6 +336,32 @@ def test_status_completed_missing_status_key(client, mock_temporal):
     handle = MagicMock()
     handle.describe = AsyncMock(return_value=_make_workflow_description("COMPLETED"))
     handle.result = AsyncMock(return_value={"task_id": "t1"})
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    result = response.json()["result"]
+    assert result["status"] == "COMPLETED"
+    assert result["detail"] == "SUCCESS"
+
+
+def test_status_completed_non_dict_result(client, mock_temporal):
+    """Test COMPLETED workflow with a non-dict result (e.g. string) uses str()."""
+    handle = MagicMock()
+    handle.describe = AsyncMock(return_value=_make_workflow_description("COMPLETED"))
+    handle.result = AsyncMock(return_value="some-string-result")
+    mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
+
+    response = client.get("/memorize/status/memorize-abc123")
+    result = response.json()["result"]
+    assert result["status"] == "COMPLETED"
+    assert result["detail"] == "some-string-result"
+
+
+def test_status_completed_none_result(client, mock_temporal):
+    """Test COMPLETED workflow with None result defaults detail to 'SUCCESS'."""
+    handle = MagicMock()
+    handle.describe = AsyncMock(return_value=_make_workflow_description("COMPLETED"))
+    handle.result = AsyncMock(return_value=None)
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
     response = client.get("/memorize/status/memorize-abc123")

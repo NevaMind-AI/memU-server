@@ -7,7 +7,7 @@ import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -51,14 +51,15 @@ _temporal_lock = asyncio.Lock()
 
 async def _get_temporal_client(app: FastAPI) -> Client:
     """Return the cached Temporal client, connecting lazily on first call."""
-    client: Client | None = getattr(app.state, "temporal", None)
-    if isinstance(client, Client):
-        return client
+    # Treat any non-None value as the cached client to support mocking/DI.
+    client = getattr(app.state, "temporal", None)
+    if client is not None:
+        return cast(Client, client)
     async with _temporal_lock:
         # Double-check after acquiring the lock
         client = getattr(app.state, "temporal", None)
-        if isinstance(client, Client):
-            return client
+        if client is not None:
+            return cast(Client, client)
         client = await Client.connect(
             settings.temporal_url,
             namespace=settings.TEMPORAL_NAMESPACE,

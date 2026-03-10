@@ -309,7 +309,7 @@ async def test_run_worker_registers_workflow_and_activities():
 
     mock_worker_cls.assert_called_once()
     call_kwargs = mock_worker_cls.call_args[1]
-    assert call_kwargs["task_queue"] == "memu-worker"
+    assert call_kwargs["task_queue"] == TASK_QUEUE
     assert MemorizeWorkflow in call_kwargs["workflows"]
     assert task_memorize in call_kwargs["activities"]
     assert call_kwargs["identity"].startswith(f"{TASK_QUEUE}@")
