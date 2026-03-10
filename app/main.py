@@ -1,5 +1,6 @@
 """memU Server - FastAPI application entry point."""
 
+import asyncio
 import json
 import logging
 import uuid
@@ -44,18 +45,27 @@ if not settings.OPENAI_API_KEY.strip():
 # Storage directory for conversation files
 storage_dir = Path(settings.STORAGE_PATH)
 
+# Lock to prevent concurrent Temporal client connections
+_temporal_lock = asyncio.Lock()
+
 
 async def _get_temporal_client(app: FastAPI) -> Client:
     """Return the cached Temporal client, connecting lazily on first call."""
     client: Client | None = getattr(app.state, "temporal", None)
-    if client is None:
+    if client is not None:
+        return client
+    async with _temporal_lock:
+        # Double-check after acquiring the lock
+        client = getattr(app.state, "temporal", None)
+        if client is not None:
+            return client
         client = await Client.connect(
             settings.temporal_url,
             namespace=settings.TEMPORAL_NAMESPACE,
         )
         app.state.temporal = client
         logger.info("Connected to Temporal at %s", settings.temporal_url)
-    return client
+        return client
 
 
 @asynccontextmanager
