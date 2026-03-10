@@ -45,9 +45,6 @@ if not settings.OPENAI_API_KEY.strip():
 # Storage directory for conversation files
 storage_dir = Path(settings.STORAGE_PATH)
 
-# Lock to prevent concurrent Temporal client connections
-_temporal_lock = asyncio.Lock()
-
 
 async def _get_temporal_client(app: FastAPI) -> Client:
     """Return the cached Temporal client, connecting lazily on first call."""
@@ -55,7 +52,11 @@ async def _get_temporal_client(app: FastAPI) -> Client:
     client = getattr(app.state, "temporal", None)
     if client is not None:
         return cast(Client, client)
-    async with _temporal_lock:
+    # Create the lock lazily on app.state so it's bound to the running event loop
+    # (module-level asyncio.Lock() can raise RuntimeError in Python 3.13+).
+    lock: asyncio.Lock = getattr(app.state, "_temporal_lock", None) or asyncio.Lock()
+    app.state._temporal_lock = lock
+    async with lock:
         # Double-check after acquiring the lock
         client = getattr(app.state, "temporal", None)
         if client is not None:
