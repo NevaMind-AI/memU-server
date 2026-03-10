@@ -125,9 +125,17 @@ def client(mock_service, mock_temporal, tmp_path):
         patch("app.main.storage_dir", tmp_path),
     ):
         with TestClient(app) as test_client:
+            prev = getattr(test_client.app.state, "temporal", None)
             # Pre-set mock Temporal client so lazy connect is bypassed
             test_client.app.state.temporal = mock_temporal
-            yield test_client
+            try:
+                yield test_client
+            finally:
+                # Restore previous state to avoid cross-test leakage
+                if prev is None:
+                    test_client.app.state.temporal = None
+                else:
+                    test_client.app.state.temporal = prev
 
 
 # ── POST /memorize ──
@@ -218,9 +226,24 @@ def test_memorize_temporal_error(client, mock_temporal, tmp_path):
     )
     assert response.status_code == 500
     assert "Failed to submit" in response.json()["detail"]
-    # Orphaned conversation file should be cleaned up
+    # Orphaned conversation file should be cleaned up (workflow never started)
     files = list(tmp_path.glob("conversation-*.json"))
     assert len(files) == 0
+
+
+def test_memorize_post_workflow_error_preserves_file(client, mock_temporal, tmp_path):
+    """If an error occurs after start_workflow succeeds, the file must NOT be deleted."""
+    # start_workflow succeeds, but the MemorizeResponse constructor is patched to fail
+    mock_temporal.start_workflow = AsyncMock(return_value=None)
+    with patch("app.main.MemorizeResponse", side_effect=RuntimeError("boom")):
+        response = client.post(
+            "/memorize",
+            json={"conversation": {}, "user_id": "u1"},
+        )
+    assert response.status_code == 500
+    # File must be preserved because workflow is already running
+    files = list(tmp_path.glob("conversation-*.json"))
+    assert len(files) == 1
 
 
 def test_memorize_uses_correct_task_queue(client, mock_temporal):

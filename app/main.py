@@ -91,6 +91,7 @@ app = FastAPI(title="memU Server", version="0.1.0", lifespan=lifespan)
 async def memorize(request: Request, body: MemorizeRequest):
     """Submit an async memorization task via Temporal workflow."""
     file_path: Path | None = None
+    workflow_started = False
     try:
         # 1. Save conversation to local storage (offload sync I/O to threadpool)
         task_id = uuid.uuid4().hex
@@ -119,6 +120,7 @@ async def memorize(request: Request, body: MemorizeRequest):
             id=workflow_id,
             task_queue=TASK_QUEUE,
         )
+        workflow_started = True
 
         logger.info("Memorize workflow started: %s", workflow_id)
 
@@ -129,8 +131,9 @@ async def memorize(request: Request, body: MemorizeRequest):
         )
         return JSONResponse(content={"status": "success", "result": result.model_dump()})
     except Exception as exc:
-        # Clean up orphaned conversation file on failure
-        if file_path is not None and file_path.exists():
+        # Only clean up the conversation file if the workflow has NOT started,
+        # because a running workflow still needs its input file.
+        if not workflow_started and file_path is not None and file_path.exists():
             try:
                 file_path.unlink(missing_ok=True)
             except Exception:
