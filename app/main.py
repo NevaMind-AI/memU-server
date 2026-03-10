@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, cast
 
+import anyio
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from temporalio.client import Client
@@ -91,11 +92,11 @@ async def memorize(request: Request, body: MemorizeRequest):
     """Submit an async memorization task via Temporal workflow."""
     file_path: Path | None = None
     try:
-        # 1. Save conversation to local storage
+        # 1. Save conversation to local storage (offload sync I/O to threadpool)
         task_id = uuid.uuid4().hex
         file_path = storage_dir / f"conversation-{task_id}.json"
-        with file_path.open("w", encoding="utf-8") as f:
-            json.dump(body.conversation, f, ensure_ascii=False)
+        data = json.dumps(body.conversation, ensure_ascii=False)
+        await anyio.to_thread.run_sync(file_path.write_text, data, "utf-8")
 
         # 2. Build workflow spec
         # Pass the filename only; the worker reconstructs the full path
