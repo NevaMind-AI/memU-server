@@ -4,6 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
+
+from app.schemas.memory import ClearMemoriesRequest, ListCategoriesRequest
 
 
 @pytest.fixture
@@ -41,7 +44,17 @@ def client(mock_service):
     # Patch create_memory_service so lifespan doesn't connect to a real DB
     with patch("app.main.create_memory_service", return_value=mock_service):
         with TestClient(app) as test_client:
-            yield test_client
+            prev = getattr(test_client.app.state, "temporal", None)
+            # Temporal connects lazily; pre-set a mock so endpoints don't call real Temporal
+            test_client.app.state.temporal = MagicMock()
+            try:
+                yield test_client
+            finally:
+                # Restore previous state to avoid cross-test leakage
+                if prev is None:
+                    test_client.app.state.temporal = None
+                else:
+                    test_client.app.state.temporal = prev
 
 
 # ── Clear endpoint tests ──
@@ -127,3 +140,109 @@ def test_list_categories_service_error(mock_service, client):
     mock_service.list_memory_categories = AsyncMock(side_effect=Exception("Database error"))
     response = client.post("/categories", json={"user_id": "user123"})
     assert response.status_code == 500
+
+
+# ── Schema-level input validation tests ──
+
+
+class TestClearMemoriesRequestValidation:
+    """Tests for ClearMemoriesRequest whitespace/blank handling."""
+
+    def test_whitespace_user_id_treated_as_none(self):
+        """Blank user_id is stripped to None; agent_id must fill the gap."""
+        req = ClearMemoriesRequest(user_id="   ", agent_id="a1")
+        assert req.user_id is None
+        assert req.agent_id == "a1"
+
+    def test_whitespace_agent_id_treated_as_none(self):
+        req = ClearMemoriesRequest(user_id="u1", agent_id="   ")
+        assert req.agent_id is None
+        assert req.user_id == "u1"
+
+    def test_both_blank_raises(self):
+        with pytest.raises(ValidationError, match="At least one"):
+            ClearMemoriesRequest(user_id="  ", agent_id="  ")
+
+    def test_empty_string_both_raises(self):
+        with pytest.raises(ValidationError, match="At least one"):
+            ClearMemoriesRequest(user_id="", agent_id="")
+
+    def test_user_id_stripped(self):
+        req = ClearMemoriesRequest(user_id="  u1  ")
+        assert req.user_id == "u1"
+
+
+class TestListCategoriesRequestValidation:
+    """Tests for ListCategoriesRequest user_id strip/min_length."""
+
+    def test_empty_user_id_raises(self):
+        with pytest.raises(ValidationError, match="user_id"):
+            ListCategoriesRequest(user_id="")
+
+    def test_whitespace_user_id_raises(self):
+        with pytest.raises(ValidationError, match="user_id"):
+            ListCategoriesRequest(user_id="   ")
+
+    def test_user_id_stripped(self):
+        req = ListCategoriesRequest(user_id="  u1  ")
+        assert req.user_id == "u1"
+
+
+# ── Endpoint-level validation tests ──
+
+
+def test_clear_whitespace_user_id_needs_agent(client):
+    """POST /clear with blank user_id only → 422 (both effectively None)."""
+    response = client.post("/clear", json={"user_id": "   "})
+    assert response.status_code == 422
+
+
+def test_categories_empty_user_id_rejected(client):
+    """POST /categories with empty user_id → 422."""
+    response = client.post("/categories", json={"user_id": ""})
+    assert response.status_code == 422
+
+
+def test_categories_whitespace_user_id_rejected(client):
+    """POST /categories with whitespace-only user_id → 422."""
+    response = client.post("/categories", json={"user_id": "   "})
+    assert response.status_code == 422
+
+
+# ── /retrieve query validation tests ──
+
+
+def test_retrieve_missing_query_rejected(client):
+    """POST /retrieve without 'query' key → 400."""
+    response = client.post("/retrieve", json={"other": "value"})
+    assert response.status_code == 400
+    assert "Missing 'query'" in response.json()["detail"]
+
+
+def test_retrieve_empty_query_rejected(client):
+    """POST /retrieve with empty string query → 400."""
+    response = client.post("/retrieve", json={"query": ""})
+    assert response.status_code == 400
+    assert "'query' must be a non-empty string" in response.json()["detail"]
+
+
+def test_retrieve_whitespace_query_rejected(client):
+    """POST /retrieve with whitespace-only query → 400."""
+    response = client.post("/retrieve", json={"query": "   "})
+    assert response.status_code == 400
+    assert "'query' must be a non-empty string" in response.json()["detail"]
+
+
+def test_retrieve_non_string_query_rejected(client):
+    """POST /retrieve with non-string query → 400."""
+    response = client.post("/retrieve", json={"query": 123})
+    assert response.status_code == 400
+    assert "'query' must be a non-empty string" in response.json()["detail"]
+
+
+def test_retrieve_valid_query_strips_whitespace(mock_service, client):
+    """POST /retrieve with valid padded query → stripped value passed to service."""
+    mock_service.retrieve = AsyncMock(return_value=[{"memory": "test"}])
+    response = client.post("/retrieve", json={"query": "  hello world  "})
+    assert response.status_code == 200
+    mock_service.retrieve.assert_called_once_with(["hello world"])
