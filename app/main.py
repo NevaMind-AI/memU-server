@@ -52,12 +52,12 @@ _temporal_lock = asyncio.Lock()
 async def _get_temporal_client(app: FastAPI) -> Client:
     """Return the cached Temporal client, connecting lazily on first call."""
     client: Client | None = getattr(app.state, "temporal", None)
-    if client is not None:
+    if isinstance(client, Client):
         return client
     async with _temporal_lock:
         # Double-check after acquiring the lock
         client = getattr(app.state, "temporal", None)
-        if client is not None:
+        if isinstance(client, Client):
             return client
         client = await Client.connect(
             settings.temporal_url,

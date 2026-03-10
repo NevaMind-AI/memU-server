@@ -87,8 +87,10 @@ def _make_workflow_description(status_name: str):
 
 @pytest.fixture
 def mock_temporal():
-    """Create a mock Temporal client."""
-    temporal = MagicMock()
+    """Create a mock Temporal client that passes isinstance(_, Client) checks."""
+    from temporalio.client import Client
+
+    temporal = MagicMock(spec=Client)
     temporal.start_workflow = AsyncMock(return_value=None)
     return temporal
 
