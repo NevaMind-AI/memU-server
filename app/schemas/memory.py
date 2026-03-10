@@ -1,6 +1,6 @@
 """Request/response schemas for memory endpoints."""
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ── Memorize (async) ──
@@ -8,9 +8,17 @@ class MemorizeRequest(BaseModel):
     """Request to memorize a conversation."""
 
     conversation: dict | list = Field(..., description="Conversation data to memorize")
-    user_id: str = Field(..., description="User ID")
+    user_id: str = Field(..., min_length=1, description="User ID (non-empty)")
     agent_id: str = Field(default="", description="Agent ID")
     override_config: dict | None = Field(default=None, description="Override MemU config")
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def strip_user_id(cls, v: str) -> str:
+        """Strip whitespace and reject blank user_id."""
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
 
 class MemorizeResponse(BaseModel):
@@ -28,7 +36,10 @@ class TaskStatusResponse(BaseModel):
     task_id: str = Field(..., description="Task ID")
     status: str = Field(
         ...,
-        description=("Task status: PENDING, RUNNING, COMPLETED, FAILED, UNKNOWN, CANCELED, TERMINATED"),
+        description=(
+            "Task status from Temporal: RUNNING, COMPLETED, FAILED, UNKNOWN, CANCELED, TERMINATED. "
+            "PENDING is returned only by the initial POST /memorize response before Temporal picks up the task."
+        ),
     )
     detail: str | None = Field(default=None, description="Status detail or error message")
 

@@ -41,6 +41,18 @@ class TestMemorizeRequestSchema:
         with pytest.raises(ValidationError, match="user_id"):
             MemorizeRequest(conversation={})
 
+    def test_empty_user_id_raises(self):
+        with pytest.raises(ValidationError, match="user_id"):
+            MemorizeRequest(conversation={}, user_id="")
+
+    def test_whitespace_user_id_raises(self):
+        with pytest.raises(ValidationError, match="user_id"):
+            MemorizeRequest(conversation={}, user_id="   ")
+
+    def test_user_id_stripped(self):
+        req = MemorizeRequest(conversation={}, user_id="  u1  ")
+        assert req.user_id == "u1"
+
 
 class TestMemorizeResponseSchema:
     """Tests for MemorizeResponse Pydantic model."""
