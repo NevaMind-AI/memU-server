@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import re
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -142,9 +143,18 @@ async def memorize(request: Request, body: MemorizeRequest):
         raise HTTPException(status_code=500, detail="Failed to submit memorization task") from exc
 
 
+# Regex for valid memorize workflow IDs: memorize-<32 hex chars>
+_MEMORIZE_WORKFLOW_ID_RE = re.compile(r"^memorize-[0-9a-f]{32}$")
+
+
 @app.get("/memorize/status/{task_id}")
 async def get_memorize_status(request: Request, task_id: str):
     """Get the status of a memorization task."""
+    if not _MEMORIZE_WORKFLOW_ID_RE.match(task_id):
+        raise HTTPException(
+            status_code=422,
+            detail="task_id must match the format 'memorize-<uuid4hex>' (e.g. memorize-abc123def456...)",
+        )
     try:
         temporal = await _get_temporal_client(request.app)
         handle = temporal.get_workflow_handle(task_id)
@@ -184,9 +194,12 @@ async def get_memorize_status(request: Request, task_id: str):
 async def retrieve(request: Request, payload: dict[str, Any]):
     if "query" not in payload:
         raise HTTPException(status_code=400, detail="Missing 'query' in request body")
+    query = payload["query"]
+    if not isinstance(query, str) or not query.strip():
+        raise HTTPException(status_code=400, detail="'query' must be a non-empty string")
     try:
         service = request.app.state.service
-        result = await service.retrieve([payload["query"]])
+        result = await service.retrieve([query.strip()])
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as exc:
         logger.exception("Retrieve request failed")

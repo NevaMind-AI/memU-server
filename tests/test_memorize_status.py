@@ -9,6 +9,10 @@ from pydantic import ValidationError
 
 from app.schemas.memory import MemorizeRequest, MemorizeResponse, TaskStatusResponse
 
+# A valid memorize workflow ID for tests (memorize- + 32 hex chars)
+_VALID_TASK_ID = "memorize-aabbccdd11223344aabbccdd11223344"
+_VALID_TASK_ID_2 = "memorize-00000000000000000000000000000000"
+
 # ── Schema unit tests ──
 
 
@@ -250,12 +254,12 @@ def test_status_running(client, mock_temporal):
     handle.describe = AsyncMock(return_value=_make_workflow_description("RUNNING"))
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
     result = data["result"]
-    assert result["task_id"] == "memorize-abc123"
+    assert result["task_id"] == _VALID_TASK_ID
     assert result["status"] == "RUNNING"
     assert result["detail"] is None
 
@@ -267,7 +271,7 @@ def test_status_completed(client, mock_temporal):
     handle.result = AsyncMock(return_value={"status": "SUCCESS", "finished_at": "2025-03-06T00:00:00"})
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     assert response.status_code == 200
     result = response.json()["result"]
     assert result["status"] == "COMPLETED"
@@ -280,7 +284,7 @@ def test_status_failed(client, mock_temporal):
     handle.describe = AsyncMock(return_value=_make_workflow_description("FAILED"))
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     assert response.status_code == 200
     result = response.json()["result"]
     assert result["status"] == "FAILED"
@@ -297,7 +301,7 @@ def test_status_not_found(client, mock_temporal):
     )
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-nonexistent")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID_2}")
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
 
@@ -312,7 +316,7 @@ def test_status_rpc_error_returns_500(client, mock_temporal):
     )
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     assert response.status_code == 500
     assert response.json()["detail"] == "Internal server error"
 
@@ -323,7 +327,7 @@ def test_status_unexpected_error_returns_500(client, mock_temporal):
     handle.describe = AsyncMock(side_effect=RuntimeError("unexpected"))
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     assert response.status_code == 500
     assert response.json()["detail"] == "Internal server error"
 
@@ -336,7 +340,7 @@ def test_status_unknown_when_status_is_none(client, mock_temporal):
     handle.describe = AsyncMock(return_value=desc)
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     assert response.status_code == 200
     result = response.json()["result"]
     assert result["status"] == "UNKNOWN"
@@ -350,7 +354,7 @@ def test_status_completed_missing_status_key(client, mock_temporal):
     handle.result = AsyncMock(return_value={"task_id": "t1"})
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     result = response.json()["result"]
     assert result["status"] == "COMPLETED"
     assert result["detail"] == "SUCCESS"
@@ -363,7 +367,7 @@ def test_status_completed_non_dict_result(client, mock_temporal):
     handle.result = AsyncMock(return_value="some-string-result")
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     result = response.json()["result"]
     assert result["status"] == "COMPLETED"
     assert result["detail"] == "some-string-result"
@@ -376,7 +380,28 @@ def test_status_completed_none_result(client, mock_temporal):
     handle.result = AsyncMock(return_value=None)
     mock_temporal.get_workflow_handle = MagicMock(return_value=handle)
 
-    response = client.get("/memorize/status/memorize-abc123")
+    response = client.get(f"/memorize/status/{_VALID_TASK_ID}")
     result = response.json()["result"]
     assert result["status"] == "COMPLETED"
     assert result["detail"] == "SUCCESS"
+
+
+# ── task_id format validation tests ──
+
+
+@pytest.mark.parametrize(
+    "bad_id",
+    [
+        "some-random-workflow",
+        "memorize-ZZZZ",
+        "memorize-abc",
+        "memorize-",
+        "other-aabbccdd11223344aabbccdd11223344",
+    ],
+    ids=["random-string", "non-hex-chars", "too-short-hex", "no-hex", "wrong-prefix"],
+)
+def test_status_rejects_invalid_task_id(client, bad_id):
+    """Task IDs that don't match memorize-<32hex> should be rejected with 422."""
+    response = client.get(f"/memorize/status/{bad_id}")
+    assert response.status_code == 422
+    assert "task_id must match" in response.json()["detail"]

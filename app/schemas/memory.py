@@ -50,6 +50,15 @@ class ClearMemoriesRequest(BaseModel):
     user_id: str | None = Field(default=None, description="User ID")
     agent_id: str | None = Field(default=None, description="Agent ID")
 
+    @field_validator("user_id", "agent_id", mode="before")
+    @classmethod
+    def strip_whitespace(cls, v: str | None) -> str | None:
+        """Strip whitespace; treat blank strings as None."""
+        if isinstance(v, str):
+            v = v.strip()
+            return v if v else None
+        return v
+
     @model_validator(mode="after")
     def check_user_or_agent(self) -> "ClearMemoriesRequest":
         if self.user_id is None and self.agent_id is None:
@@ -72,8 +81,16 @@ class ClearMemoriesResponse(BaseModel):
 class ListCategoriesRequest(BaseModel):
     """Request to list memory categories."""
 
-    user_id: str = Field(..., description="User ID")
+    user_id: str = Field(..., min_length=1, description="User ID (non-empty)")
     agent_id: str | None = Field(default=None, description="Agent ID")
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def strip_user_id(cls, v: str) -> str:
+        """Strip whitespace and reject blank user_id."""
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
 
 class CategoryObject(BaseModel):
