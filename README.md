@@ -116,7 +116,7 @@ export OPENAI_API_KEY=your_api_key_here
 docker pull nevamindai/memu-server:latest
 
 docker run --rm -p 8000:8000 \
-  --network memu-server_memu-network \
+  --network memu-network \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -e POSTGRES_HOST=postgres \
   -e TEMPORAL_HOST=temporal \
@@ -126,7 +126,7 @@ docker run --rm -p 8000:8000 \
 > **Note:** Both the API server and Temporal worker share the same Docker image. Override the entrypoint to run the worker:
 > ```bash
 > docker run --rm \
->   --network memu-server_memu-network \
+>   --network memu-network \
 >   -e OPENAI_API_KEY=$OPENAI_API_KEY \
 >   -e POSTGRES_HOST=postgres \
 >   -e TEMPORAL_HOST=temporal \
@@ -136,7 +136,9 @@ docker run --rm -p 8000:8000 \
 
 ### Environment Variables
 
-All settings are loaded from environment variables or an `.env` file. Key variables:
+The memU-server API and worker processes load their configuration from environment variables or an `.env` file. Key application-level variables:
+
+> Docker Compose may define additional infrastructure-specific environment variables (for example, `TEMPORAL_DB`); refer to `docker-compose.yml` for the complete list used by the containers.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -203,7 +205,7 @@ Saves conversation data and starts an async Temporal workflow. Returns immediate
 {
   "status": "success",
   "result": {
-    "task_id": "memorize-a1b2c3d4e5f6...",
+    "task_id": "memorize-a1b2c3d4e5f60718293a4b5c6d7e8f90",
     "status": "PENDING",
     "message": "Memorization task submitted for user user-001"
   }
@@ -212,10 +214,10 @@ Saves conversation data and starts an async Temporal workflow. Returns immediate
 
 ### `GET /memorize/status/{task_id}` — Poll Task Status
 
-Track a memorization task. The `task_id` must match the format `memorize-<32 hex chars>`.
+Track a memorization task. The `task_id` must match the format `memorize-<32 hex chars>` (as returned by `POST /memorize`).
 
 ```bash
-curl http://localhost:8000/memorize/status/memorize-a1b2c3d4e5f6...
+curl http://localhost:8000/memorize/status/memorize-a1b2c3d4e5f60718293a4b5c6d7e8f90
 ```
 
 **Response:**
@@ -223,7 +225,7 @@ curl http://localhost:8000/memorize/status/memorize-a1b2c3d4e5f6...
 {
   "status": "success",
   "result": {
-    "task_id": "memorize-a1b2c3d4e5f6...",
+    "task_id": "memorize-a1b2c3d4e5f60718293a4b5c6d7e8f90",
     "status": "COMPLETED",
     "detail": "SUCCESS"
   }
@@ -334,8 +336,8 @@ curl -X POST http://localhost:8000/memorize \
   -H "Content-Type: application/json" \
   -d '{"conversation": [{"role":"user","content":{"text":"hello"},"created_at":"2025-01-01 00:00:00"}], "user_id":"u1"}'
 
-# Check status
-curl http://localhost:8000/memorize/status/memorize-<task_id>
+# Check status (use the task_id returned by POST /memorize)
+curl http://localhost:8000/memorize/status/<task_id>
 
 # Retrieve
 curl -X POST http://localhost:8000/retrieve \

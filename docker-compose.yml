@@ -62,4 +62,5 @@ volumes:
 
 networks:
   memu-network:
+    name: memu-network
     driver: bridge
