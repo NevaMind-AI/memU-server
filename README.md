@@ -15,109 +15,364 @@ Star memU-server to get notified about new releases and join our growing communi
 
 ---
 
-## 🚀 Get Started
+## 🏗️ Architecture
 
-### Run from source
-1. Ensure you have Python 3.13+ and [uv](https://docs.astral.sh/uv/) installed.
-2. Clone the repository and enter it:
-   ```bash
-   git clone https://github.com/NevaMind-AI/memU-server.git
-   cd memU-server
-   ```
-3. Set your OpenAI API key in the environment:
-   ```bash
-   export OPENAI_API_KEY=your_api_key_here
-   ```
-4. Install dependencies and start the FastAPI dev server:
-   ```bash
-   uv sync
-   uv run fastapi dev
-   ```
-   The server runs on `http://127.0.0.1:8000`.
+memU-server runs as two cooperating processes backed by shared infrastructure:
 
-### Run local infrastructure with Docker Compose
-Start local infrastructure dependencies (PostgreSQL and Temporal). Start the FastAPI API server separately (see "Run from source" above):
-
-```bash
-# Start infrastructure services (PostgreSQL, Temporal, Temporal UI)
-docker compose up -d
-
-# View logs
-docker compose logs -f
+```
+                          ┌─────────────────────────────────────┐
+  Client ──HTTP──►        │  FastAPI API Server  (port 8000)    │
+                          │  POST /memorize  →  start workflow  │
+                          │  GET  /memorize/status/{task_id}    │
+                          │  POST /retrieve, /clear, /categories│
+                          └──────────────┬──────────────────────┘
+                                         │ gRPC
+                          ┌──────────────▼──────────────────────┐
+                          │      Temporal Server (port 7233)     │
+                          └──────────────┬──────────────────────┘
+                                         │ poll
+                          ┌──────────────▼──────────────────────┐
+                          │       Temporal Worker Process        │
+                          │  MemorizeWorkflow → task_memorize   │
+                          │  (calls memu-py MemoryService)      │
+                          └──────────────┬──────────────────────┘
+                                         │ SQL
+                          ┌──────────────▼──────────────────────┐
+                          │  PostgreSQL + pgvector  (port 5432)  │
+                          │  app db: memu  |  temporal db: temporal│
+                          └─────────────────────────────────────┘
 ```
 
-**Services:**
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| API Server | FastAPI 0.122+ / Python 3.13 | HTTP endpoints, request validation, workflow dispatch |
+| Workflow Engine | Temporal 1.25 / temporalio SDK 1.16 | Durable async task orchestration for `/memorize` |
+| Worker | Temporal Worker (same codebase) | Executes `MemorizeWorkflow` → `task_memorize` activity |
+| Database | PostgreSQL 16 + pgvector | Vector storage for memories, Temporal persistence |
+| Memory Core | memu-py 1.2+ | Three-layer memory algorithm (Resource → Item → Category) |
+
+### How `/memorize` Works (Async)
+
+1. Client POSTs conversation payload to `/memorize`.
+2. API server saves conversation to local storage, starts a Temporal workflow, and returns immediately with a `task_id`.
+3. Temporal dispatches the `MemorizeWorkflow` to the worker process.
+4. The worker executes `task_memorize` activity (calls memu-py `MemoryService.memorize()`), writing results to PostgreSQL.
+5. Client polls `GET /memorize/status/{task_id}` to track progress (`RUNNING` → `COMPLETED` / `FAILED`).
+
+---
+
+## 🚀 Get Started
+
+### Prerequisites
+
+- **Python 3.13+** and [uv](https://docs.astral.sh/uv/) package manager
+- **Docker & Docker Compose** (for infrastructure services)
+- **OpenAI API key** (required for LLM and embedding operations)
+
+### 1. Start Infrastructure
+
+Launch PostgreSQL (with pgvector), Temporal Server, and Temporal UI:
+
+```bash
+docker compose up -d
+```
+
 | Service | Port | Description |
 |---------|------|-------------|
 | PostgreSQL | 5432 | Database with pgvector extension |
 | Temporal | 7233 | Workflow engine gRPC API |
 | Temporal UI | 8088 | Web management interface |
 
-**Default Configuration:**
-- PostgreSQL DSN: `postgresql://postgres:postgres@localhost:5432/memu`
-- Temporal Database: `temporal` (separate from app database)
+### 2. Install & Run from Source
 
-**Environment Variables (optional `.env` file):**
-```env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=memu
-TEMPORAL_DB=temporal
+```bash
+# Clone the repository
+git clone https://github.com/NevaMind-AI/memU-server.git
+cd memU-server
+
+# Install dependencies
+make install
+# or: uv sync
+
+# Configure environment (create .env or export)
+export OPENAI_API_KEY=your_api_key_here
+
+# Start the API server (terminal 1)
+make run
+# or: uv run fastapi dev
+
+# Start the Temporal worker (terminal 2)
+uv run python -m app.workers.worker
 ```
 
-### Run with Docker
-1. Export your OpenAI API key so Docker can read it:
-   ```bash
-   export OPENAI_API_KEY=your_api_key_here
-   ```
-2. Pull the latest image:
-   ```bash
-   docker pull nevamindai/memu-server:latest
-   ```
-3. Start the container (optionally mount a host directory to persist `./data`):
-   ```bash
-   docker run --rm -p 8000:8000 \
-     -e OPENAI_API_KEY=$OPENAI_API_KEY \
-     nevamindai/memu-server:latest
-   ```
-   Access the API at `http://127.0.0.1:8000`.
+The API server runs on `http://127.0.0.1:8000`.
 
-### API Endpoints
-- `POST /memorize`: persist a conversation-style payload for later retrieval. Example body shape:
-  ```json
-  {
-    "content": [
-      {"role": "user", "content": {"text": "..."}, "created_at": "YYYY-MM-DD HH:MM:SS"},
-      {"role": "assistant", "content": {"text": "..."}, "created_at": "YYYY-MM-DD HH:MM:SS"}
+### 3. Run with Docker
+
+```bash
+export OPENAI_API_KEY=your_api_key_here
+
+# Pull and run the API server
+docker pull nevamindai/memu-server:latest
+
+docker run --rm -p 8000:8000 \
+  --network memu-server_memu-network \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  -e POSTGRES_HOST=postgres \
+  -e TEMPORAL_HOST=temporal \
+  nevamindai/memu-server:latest
+```
+
+> **Note:** Both the API server and Temporal worker share the same Docker image. Override the entrypoint to run the worker:
+> ```bash
+> docker run --rm \
+>   --network memu-server_memu-network \
+>   -e OPENAI_API_KEY=$OPENAI_API_KEY \
+>   -e POSTGRES_HOST=postgres \
+>   -e TEMPORAL_HOST=temporal \
+>   nevamindai/memu-server:latest \
+>   uv run python -m app.workers.worker
+> ```
+
+### Environment Variables
+
+All settings are loaded from environment variables or an `.env` file. Key variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENAI_API_KEY` | *(required)* | OpenAI API key |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible API base URL |
+| `DEFAULT_LLM_MODEL` | `gpt-4o-mini` | Chat model for memorization |
+| `EMBEDDING_API_KEY` | Falls back to `OPENAI_API_KEY` | Embedding provider API key |
+| `EMBEDDING_BASE_URL` | `https://api.voyageai.com/v1` | Embedding API base URL |
+| `EMBEDDING_MODEL` | `voyage-3.5-lite` | Embedding model name |
+| `POSTGRES_USER` | `postgres` | PostgreSQL user |
+| `POSTGRES_PASSWORD` | `postgres` | PostgreSQL password |
+| `POSTGRES_HOST` | `localhost` | PostgreSQL host |
+| `POSTGRES_PORT` | `5432` | PostgreSQL port |
+| `POSTGRES_DB` | `memu` | Application database name |
+| `DATABASE_URL` | *(auto-assembled)* | Full DSN (overrides individual PG vars) |
+| `TEMPORAL_HOST` | `localhost` | Temporal server host |
+| `TEMPORAL_PORT` | `7233` | Temporal server gRPC port |
+| `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
+| `STORAGE_PATH` | `./data/storage` | Local directory for conversation files |
+
+### Makefile Commands
+
+```bash
+make install       # Install dependencies & pre-commit hooks
+make run           # Start FastAPI dev server
+make check         # Lint + type check + dependency check (CI)
+make test          # Run tests with coverage
+make clean         # Clean __pycache__, .pyc, build artifacts
+make docker-up     # Start Docker infrastructure services
+make docker-down   # Stop Docker infrastructure services
+```
+
+---
+
+## 📡 API Endpoints
+
+### `GET /` — Health Check
+
+```bash
+curl http://localhost:8000/
+```
+
+Response: `{"message": "Hello MemU user!"}`
+
+### `POST /memorize` — Submit Async Memorization Task
+
+Saves conversation data and starts an async Temporal workflow. Returns immediately with a `task_id` for status polling.
+
+**Request:**
+```json
+{
+  "conversation": [
+    {"role": "user", "content": {"text": "I prefer dark mode"}, "created_at": "2025-03-20 10:00:00"},
+    {"role": "assistant", "content": {"text": "Noted!"}, "created_at": "2025-03-20 10:00:01"}
+  ],
+  "user_id": "user-001",
+  "agent_id": "agent-001",
+  "override_config": null
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "result": {
+    "task_id": "memorize-a1b2c3d4e5f6...",
+    "status": "PENDING",
+    "message": "Memorization task submitted for user user-001"
+  }
+}
+```
+
+### `GET /memorize/status/{task_id}` — Poll Task Status
+
+Track a memorization task. The `task_id` must match the format `memorize-<32 hex chars>`.
+
+```bash
+curl http://localhost:8000/memorize/status/memorize-a1b2c3d4e5f6...
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "result": {
+    "task_id": "memorize-a1b2c3d4e5f6...",
+    "status": "COMPLETED",
+    "detail": "SUCCESS"
+  }
+}
+```
+
+Status values: `RUNNING`, `COMPLETED`, `FAILED`, `CANCELED`, `TERMINATED`, `UNKNOWN`.
+
+### `POST /retrieve` — Query Stored Memories
+
+```json
+{"query": "What are the user's UI preferences?"}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "result": { ... }
+}
+```
+
+### `POST /clear` — Clear Memories
+
+Delete memories for a specific user and/or agent. At least one of `user_id` or `agent_id` must be provided.
+
+```json
+{"user_id": "user-001", "agent_id": "agent-001"}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "result": {
+    "purged_categories": 3,
+    "purged_items": 15,
+    "purged_resources": 2
+  }
+}
+```
+
+### `POST /categories` — List Memory Categories
+
+List all memory categories for a user.
+
+```json
+{"user_id": "user-001"}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "result": {
+    "categories": [
+      {
+        "name": "UI Preferences",
+        "description": "User interface preferences",
+        "user_id": "user-001",
+        "agent_id": "agent-001",
+        "summary": "User prefers dark mode..."
+      }
     ]
   }
-  ```
-- `POST /retrieve`: query stored memories with a text prompt:
-  ```json
-  {"query": "your question about the conversation"}
-  ```
-- To smoke-test locally, set `MEMU_API_URL` (defaults to `http://127.0.0.1:12345`), POST a conversation to `/memorize`, then call `/retrieve` with a text query.
+}
+```
+
+---
+
+## 🔌 Integration Guide
+
+### Python
+
+```python
+import httpx
+
+BASE = "http://localhost:8000"
+
+# Memorize a conversation
+resp = httpx.post(f"{BASE}/memorize", json={
+    "conversation": [
+        {"role": "user", "content": {"text": "I like Python"}, "created_at": "2025-03-20 10:00:00"},
+        {"role": "assistant", "content": {"text": "Great choice!"}, "created_at": "2025-03-20 10:00:01"},
+    ],
+    "user_id": "user-001",
+})
+task_id = resp.json()["result"]["task_id"]
+
+# Poll until complete
+import time
+while True:
+    status = httpx.get(f"{BASE}/memorize/status/{task_id}").json()
+    if status["result"]["status"] in ("COMPLETED", "FAILED"):
+        break
+    time.sleep(2)
+
+# Retrieve memories
+result = httpx.post(f"{BASE}/retrieve", json={"query": "What languages does the user like?"})
+print(result.json())
+```
+
+### cURL
+
+```bash
+# Submit memorization
+curl -X POST http://localhost:8000/memorize \
+  -H "Content-Type: application/json" \
+  -d '{"conversation": [{"role":"user","content":{"text":"hello"},"created_at":"2025-01-01 00:00:00"}], "user_id":"u1"}'
+
+# Check status
+curl http://localhost:8000/memorize/status/memorize-<task_id>
+
+# Retrieve
+curl -X POST http://localhost:8000/retrieve \
+  -H "Content-Type: application/json" \
+  -d '{"query": "user preferences"}'
+
+# List categories
+curl -X POST http://localhost:8000/categories \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "u1"}'
+
+# Clear memories
+curl -X POST http://localhost:8000/clear \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "u1"}'
+```
 
 ---
 
 ## 🔑 Key Features
 
+### Async Memorization with Temporal
+- Non-blocking `/memorize` endpoint returns immediately with a task ID
+- Durable workflow execution — tasks survive server restarts
+- Status tracking via `/memorize/status/{task_id}`
+- 10-minute activity timeout with automatic retry support
+
 ### Quick Deployment
-- Docker image provided
-- Launch backend service and database with a single command
-- Provides API endpoints compatible with memU-ui, ensuring stable and reliable data services
+- Docker image for both API server and worker
+- Docker Compose for infrastructure (PostgreSQL + Temporal)
+- Single `make install && make run` to start development
 
 ### Comprehensive Memory Management
-(Some features planned for future releases)
-- Memory Data Management
-  - Support creating, reading, and deleting Memory Submissions
-  - Memorize results support create, read, update, and delete (CRUD) operations
-  - Retrieve records support querying and tracking
-  - Tracks LLM token usage for transparent and controllable costs
-- User and Permission Management
-  - User login and registration system
-  - Role-based access control: Developer / Admin / Regular User
-  - Backend manages access scope and permissions for secure operations
+- **Memorize**: Async conversation ingestion via Temporal workflows
+- **Retrieve**: Semantic search over stored memories (RAG-based or LLM-based)
+- **Clear**: Targeted memory deletion by user/agent
+- **Categories**: Browse and manage memory categories
 
 ---
 
